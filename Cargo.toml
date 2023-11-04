@@ -1,0 +1,17 @@
+[package]
+name = "tui-practice"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+chrono = "0.4.31"
+crossterm = "0.27.0"
+env_logger = "0.10.0"
+log = "0.4.20"
+regex = "1.10.2"
+serde = { version = "1.0.190", features = ["derive"] }
+serde_json = "1.0.108"
+tui = "0.19.0"

@@ -432,6 +432,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 
 [[package]]
+name = "log-viewer-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "crossterm",
+ "env_logger",
+ "log",
+ "ratatui",
+ "regex",
+ "rfd",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "lru"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -861,22 +877,6 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "winnow",
-]
-
-[[package]]
-name = "tui-practice"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "crossterm",
- "env_logger",
- "log",
- "ratatui",
- "regex",
- "rfd",
- "serde",
- "serde_json",
 ]
 
 [[package]]

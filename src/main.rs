@@ -33,6 +33,8 @@ struct Tab {
 struct App {
     state: TableState,
     view_mode: ViewMode,
+
+    // TODO: persist state info
     tabs: Vec<Tab>,
     tab_index: usize,
 }

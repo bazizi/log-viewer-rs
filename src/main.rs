@@ -7,7 +7,8 @@ use crossterm::{
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Layout},
-    style::{Color, Modifier, Style},
+    prelude::Direction,
+    style::{Color, Modifier, Style, Stylize},
     widgets::{Block, Borders, Cell, Row, Table, TableState, Wrap},
     Frame, Terminal,
 };
@@ -16,31 +17,57 @@ use std::{env, error::Error, io};
 mod parser;
 use parser::log_parser::LogEntry;
 
+use rfd::FileDialog;
+
 enum ViewMode {
     Table,
     TableItem(usize /* index */),
 }
 
+struct Tab {
+    file_path: String,
+    items: Vec<LogEntry>,
+    selected_item: usize,
+}
+
 struct App {
     state: TableState,
     view_mode: ViewMode,
-    items: Vec<LogEntry>,
-    file_path: String,
+    tabs: Vec<Tab>,
+    tab_index: usize,
 }
 
 impl App {
-    fn new(file_path: &String) -> App {
-        App {
-            state: TableState::default(),
-            view_mode: ViewMode::Table,
-            items: parser::log_parser::parse_log_by_path(&file_path, 0).unwrap(),
-            file_path: file_path.clone(),
+    fn new(file_path: Option<&String>) -> App {
+        if let Some(file_path) = file_path {
+            App {
+                state: TableState::default(),
+                view_mode: ViewMode::Table,
+                tabs: vec![Tab {
+                    file_path: file_path.clone(),
+                    items: parser::log_parser::parse_log_by_path(&file_path, 0).unwrap(),
+                    selected_item: 0,
+                }],
+                tab_index: 0,
+            }
+        } else {
+            App {
+                // TODO: Add a help page on startup
+                state: TableState::default(),
+                view_mode: ViewMode::Table,
+                tabs: vec![Tab {
+                    file_path: "Help".to_owned(),
+                    items: vec![],
+                    selected_item: 0,
+                }],
+                tab_index: 0,
+            }
         }
     }
     pub fn next(&mut self) {
-        let i = match self.state.selected() {
+        self.tabs[self.tab_index].selected_item = match self.state.selected() {
             Some(i) => {
-                if i >= self.items.len() - 1 {
+                if i >= self.tabs[self.tab_index].items.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -48,47 +75,54 @@ impl App {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state
+            .select(Some(self.tabs[self.tab_index].selected_item));
     }
 
     pub fn previous(&mut self) {
-        let i = match self.state.selected() {
+        self.tabs[self.tab_index].selected_item = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.items.len() - 1
+                    self.tabs[self.tab_index].items.len() - 1
                 } else {
                     i - 1
                 }
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state
+            .select(Some(self.tabs[self.tab_index].selected_item));
     }
 
     pub fn start(&mut self) {
-        self.state.select(Some(0));
+        self.tabs[self.tab_index].selected_item = 0;
+        self.state
+            .select(Some(self.tabs[self.tab_index].selected_item));
     }
 
     pub fn end(&mut self) {
-        self.state.select(Some(self.items.len() - 1));
+        self.tabs[self.tab_index].selected_item = self.tabs[self.tab_index].items.len() - 1;
+        self.state
+            .select(Some(self.tabs[self.tab_index].selected_item));
     }
 
     pub fn page_down(&mut self) {
-        let i = match self.state.selected() {
+        self.tabs[self.tab_index].selected_item = match self.state.selected() {
             Some(i) => {
-                if i >= self.items.len() - 21 {
-                    self.items.len() - 1
+                if i >= self.tabs[self.tab_index].items.len() - 21 {
+                    self.tabs[self.tab_index].items.len() - 1
                 } else {
                     i + 20
                 }
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state
+            .select(Some(self.tabs[self.tab_index].selected_item));
     }
 
     pub fn page_up(&mut self) {
-        let i = match self.state.selected() {
+        self.tabs[self.tab_index].selected_item = match self.state.selected() {
             Some(i) => {
                 if i <= 20 {
                     0
@@ -98,7 +132,8 @@ impl App {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state
+            .select(Some(self.tabs[self.tab_index].selected_item));
     }
 
     pub fn switch_to_item_view(&mut self) {
@@ -112,9 +147,30 @@ impl App {
             _ => {}
         }
     }
+
+    pub fn load_files(&mut self) {
+        let file = FileDialog::new()
+            .add_filter("text", &["txt", "log", "bak"])
+            .pick_file()
+            .unwrap();
+        let file_path = file.to_str().unwrap().to_string();
+        self.tabs.push(Tab {
+            items: parser::log_parser::parse_log_by_path(&file_path, 0).unwrap(),
+            file_path: file_path,
+            selected_item: 0,
+        });
+    }
+
+    pub fn next_tab(&mut self) {
+        self.tab_index = (self.tab_index + 1) % self.tabs.len();
+        self.state
+            .select(Some(self.tabs[self.tab_index].selected_item));
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
+
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -124,13 +180,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let args = env::args();
     let args = args.into_iter().collect::<Vec<String>>();
-    if args.len() < 2 {
-        println!("\n\nUsage: {} <path/to/file>", args[0]);
-        return Ok(());
-    }
 
     // create app and run it
-    let app = App::new(&args[1]);
+    let app = App::new(if args.len() == 2 {
+        Some(&args[1])
+    } else {
+        None
+    });
     let res = run_app(&mut terminal, app);
 
     // restore terminal
@@ -172,6 +228,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 KeyCode::PageDown => app.page_down(),
                 KeyCode::PageUp => app.page_up(),
                 KeyCode::Enter => app.switch_to_item_view(),
+                KeyCode::Char('o') => app.load_files(),
+                KeyCode::Right => app.next_tab(),
 
                 // VIm style bindings
                 KeyCode::Char('j') => app.next(),
@@ -192,8 +250,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
 
 fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
     let rects = Layout::default()
-        .constraints([Constraint::Percentage(100)].as_ref())
-        .margin(5)
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
         .split(f.size());
 
     let selected_style = Style::default().add_modifier(Modifier::REVERSED);
@@ -204,7 +262,7 @@ fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
         .style(Style::default().bg(Color::Cyan))
         .height(1)
         .bottom_margin(0);
-    let rows = app.items.iter().map(|item| {
+    let rows = app.tabs[app.tab_index].items.iter().map(|item| {
         let height = item
             .iter()
             .map(|content| content.chars().filter(|c| *c == '\n').count())
@@ -226,9 +284,23 @@ fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
         }
     });
 
+    let tabs = ratatui::widgets::Tabs::new(
+        app.tabs
+            .iter()
+            .map(|tab| tab.file_path.clone())
+            .collect::<Vec<String>>(),
+    )
+    .block(Block::default().title("Tabs").borders(Borders::ALL))
+    .style(Style::default().white())
+    .highlight_style(Style::default().yellow())
+    .divider(ratatui::symbols::bar::FULL)
+    .select(app.tab_index);
+
+    f.render_widget(tabs, rects[0]);
+
     match app.view_mode {
         ViewMode::TableItem(item) => {
-            let t = ratatui::widgets::Paragraph::new(&*app.items[item][5])
+            let t = ratatui::widgets::Paragraph::new(&*app.tabs[app.tab_index].items[item][5])
                 .block(Block::default().title("Log entry").borders(Borders::ALL))
                 .style(Style::default().fg(Color::White).bg(Color::Black))
                 .wrap(Wrap { trim: true });
@@ -240,7 +312,7 @@ fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
-                        .title(app.file_path.clone()),
+                        .title(app.tabs[app.tab_index].file_path.clone()),
                 )
                 .highlight_style(selected_style)
                 .highlight_symbol(">> ")
@@ -252,7 +324,7 @@ fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
                     Constraint::Length(6),
                     Constraint::Percentage(100),
                 ]);
-            f.render_stateful_widget(t, rects[0], &mut app.state);
+            f.render_stateful_widget(t, rects[1], &mut app.state);
         }
     }
 }

@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 pub type LogEntry = Vec<String>;
 
 pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEntry>> {
+    info!("Attempting to parse log file [{}]...", log_path);
     let re = regex::Regex::new(
         // ^\s+(\d+)\s+\[([^\]]+)\]\s+PID:\s+(\d+)\s+TID:\s+(\d+)\s+(\w+)\s+(.*)
         r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s+(?P<pid>\d+)\s+TID:\s+(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,

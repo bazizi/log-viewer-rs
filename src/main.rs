@@ -159,6 +159,7 @@ impl App {
             file_path: file_path,
             selected_item: 0,
         });
+        self.tab_index = self.tabs.len() - 1;
     }
 
     pub fn next_tab(&mut self) {

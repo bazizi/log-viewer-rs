@@ -172,7 +172,19 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 KeyCode::PageDown => app.page_down(),
                 KeyCode::PageUp => app.page_up(),
                 KeyCode::Enter => app.switch_to_item_view(),
+
+                // VIm style bindings
+                KeyCode::Char('j') => app.next(),
+                KeyCode::Char('k') => app.previous(),
                 _ => {}
+            }
+        }
+
+        if let Event::Mouse(mouse_event) = event::read()? {
+            if mouse_event.kind == crossterm::event::MouseEventKind::ScrollUp {
+                app.previous()
+            } else if mouse_event.kind == crossterm::event::MouseEventKind::ScrollDown {
+                app.next()
             }
         }
     }
@@ -185,12 +197,11 @@ fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
         .split(f.size());
 
     let selected_style = Style::default().add_modifier(Modifier::REVERSED);
-    let normal_style = Style::default().bg(Color::Black);
     let header_cells = ["index", "date", "pid", "tid", "level", "log"]
         .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Yellow)));
+        .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
     let header = Row::new(header_cells)
-        .style(normal_style)
+        .style(Style::default().bg(Color::Cyan))
         .height(1)
         .bottom_margin(0);
     let rows = app.items.iter().map(|item| {
@@ -201,7 +212,18 @@ fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
             .unwrap_or(0)
             + 1;
         let cells = item.iter().map(|c| Cell::from(&**c));
-        Row::new(cells).height(height as u16).bottom_margin(1)
+        let row = Row::new(cells).height(height as u16);
+        if app.state.selected() == Some(usize::from_str_radix(&item[0], 10).unwrap()) {
+            row
+        } else {
+            let color = match item[4].as_str() {
+                "ERROR" => (Color::Red, Color::White),
+                "WARN" => (Color::LightYellow, Color::Black),
+                _ => (Color::Black, Color::White),
+            };
+
+            row.style(Style::default().bg(color.0).fg(color.1))
+        }
     });
 
     match app.view_mode {

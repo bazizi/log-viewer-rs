@@ -4,14 +4,14 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-use std::{env, error::Error, io};
-use tui::{
+use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Layout},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Cell, Row, Table, TableState, Wrap},
     Frame, Terminal,
 };
+use std::{env, error::Error, io};
 
 mod parser;
 use parser::log_parser::LogEntry;
@@ -151,7 +151,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &mut app))?;
+        while event::poll(std::time::Duration::from_millis(1)).unwrap() {
+            event::read()?;
+        }
+
+        terminal.draw(|f| ui::<B>(f, &mut app))?;
 
         if let Event::Key(key) = event::read()? {
             match key.code {
@@ -173,12 +177,12 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
 
             // Due to a bug, key downs can be registered twice
             // This is a temporary hack to avoid the issue
-            if let Event::Key(key) = event::read()? {}
+            event::read()?;
         }
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
     let rects = Layout::default()
         .constraints([Constraint::Percentage(100)].as_ref())
         .margin(5)
@@ -206,7 +210,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
 
     match app.view_mode {
         ViewMode::TableItem(item) => {
-            let t = tui::widgets::Paragraph::new(&*app.items[item][5])
+            let t = ratatui::widgets::Paragraph::new(&*app.items[item][5])
                 .block(Block::default().title("Log entry").borders(Borders::ALL))
                 .style(Style::default().fg(Color::White).bg(Color::Black))
                 .wrap(Wrap { trim: true });

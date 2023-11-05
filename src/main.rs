@@ -151,13 +151,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
-        while event::poll(std::time::Duration::from_millis(1)).unwrap() {
-            event::read()?;
-        }
-
         terminal.draw(|f| ui::<B>(f, &mut app))?;
 
         if let Event::Key(key) = event::read()? {
+            if key.kind != crossterm::event::KeyEventKind::Press {
+                continue;
+            }
+
             match key.code {
                 KeyCode::Char('q') => match app.view_mode {
                     ViewMode::Table => return Ok(()),
@@ -174,10 +174,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
                 KeyCode::Enter => app.switch_to_item_view(),
                 _ => {}
             }
-
-            // Due to a bug, key downs can be registered twice
-            // This is a temporary hack to avoid the issue
-            event::read()?;
         }
     }
 }

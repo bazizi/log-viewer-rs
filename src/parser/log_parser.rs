@@ -1,35 +1,19 @@
 use anyhow::Result;
-use chrono::DateTime;
-use std::collections::HashMap;
 use std::io::Read;
 use std::io::Seek;
 
 use log::{error, info};
-use serde::{Deserialize, Serialize};
-
-// #[derive(Serialize, Deserialize, Debug, Clone)]
-// pub struct LogEntry {
-//     pub id: String,
-//     pub session: usize,
-//     pub date: String,
-//     pub pid: String,
-//     pub tid: String,
-//     pub level: String,
-//     pub log: String,
-//     pub selected: bool,
-// }
 
 pub type LogEntry = Vec<String>;
 
 pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEntry>> {
     info!("Attempting to parse log file [{}]...", log_path);
     let re = regex::Regex::new(
-        // ^\s+(\d+)\s+\[([^\]]+)\]\s+PID:\s+(\d+)\s+TID:\s+(\d+)\s+(\w+)\s+(.*)
         r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s+(?P<pid>\d+)\s+TID:\s+(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
     )?;
 
     let mut line_num = 0;
-    let mut session = 0;
+    let mut _session = 0;
     let mut contents = String::new();
     let lines = {
         let mut f = std::fs::File::open(log_path)?;
@@ -58,7 +42,7 @@ pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEnt
         }
 
         if &cap["id"] == "0" {
-            session += 1;
+            _session += 1;
         }
 
         let id = line_num;
@@ -92,7 +76,7 @@ pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEnt
 
         log_entries.push(vec![
             id.to_string(),
-            // session.to_string(),
+            // _session.to_string(),
             date.to_string(),
             pid.to_string(),
             tid.to_string(),
@@ -104,7 +88,7 @@ pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEnt
     }
 
     info!(
-        "found [{}] log sessions in [{}]",
+        "found [{}] log _sessions in [{}]",
         log_entries.len(),
         log_path
     );

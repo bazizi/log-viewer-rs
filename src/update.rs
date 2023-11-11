@@ -1,4 +1,4 @@
-use crate::{App, ViewMode};
+use crate::{app::SelectedInput, App, ViewMode};
 
 use crossterm::event::{self, Event, KeyCode};
 
@@ -7,6 +7,32 @@ use std::io;
 pub fn update(app: &mut App) -> io::Result<()> {
     if let Event::Key(key) = event::read()? {
         if key.kind != crossterm::event::KeyEventKind::Press {
+            return Ok(());
+        }
+
+        if let Some(SelectedInput::Filter(current_input)) = &mut app.selected_input {
+            match key.code {
+                KeyCode::Char(c) => {
+                    current_input.push(c);
+                }
+                KeyCode::Backspace => {
+                    current_input.pop();
+                }
+                KeyCode::Esc => app.selected_input = None,
+                _ => {}
+            }
+            return Ok(());
+        } else if let Some(SelectedInput::Search(current_input)) = &mut app.selected_input {
+            match key.code {
+                KeyCode::Char(c) => {
+                    current_input.push(c);
+                }
+                KeyCode::Backspace => {
+                    current_input.pop();
+                }
+                KeyCode::Esc => app.selected_input = None,
+                _ => {}
+            }
             return Ok(());
         }
 
@@ -29,6 +55,9 @@ pub fn update(app: &mut App) -> io::Result<()> {
             KeyCode::Right => app.next_tab(),
             KeyCode::Down | KeyCode::Char('j') => app.next(),
             KeyCode::Up | KeyCode::Char('k') => app.previous(),
+
+            KeyCode::Char('f') => app.selected_input = Some(SelectedInput::Filter("".to_owned())),
+            KeyCode::Char('s') => app.selected_input = Some(SelectedInput::Search("".to_owned())),
             _ => {}
         }
     }

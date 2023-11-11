@@ -3,7 +3,11 @@ use rfd::FileDialog;
 
 use crate::parser;
 use crate::parser::log_parser::LogEntry;
-// use crate::parser::log_parser::{parse_log_by_path, LogEntry};
+
+pub enum SelectedInput {
+    Filter(String),
+    Search(String),
+}
 
 pub struct App {
     pub should_quit: bool,
@@ -11,6 +15,7 @@ pub struct App {
     pub view_mode: ViewMode,
     pub tabs: Vec<Tab>,
     pub tab_index: usize,
+    pub selected_input: Option<SelectedInput>,
 }
 
 impl App {
@@ -26,6 +31,7 @@ impl App {
                     selected_item: 0,
                 }],
                 tab_index: 0,
+                selected_input: None,
             }
         } else {
             App {
@@ -39,6 +45,7 @@ impl App {
                     selected_item: 0,
                 }],
                 tab_index: 0,
+                selected_input: None,
             }
         }
     }

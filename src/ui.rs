@@ -61,23 +61,26 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .style(Style::default().bg(Color::Cyan))
         .height(1)
         .bottom_margin(0);
-    let rows = app.tabs[app.tab_index].items.iter().map(|item| {
-        let height = item
-            .iter()
-            .map(|content| content.chars().filter(|c| *c == '\n').count())
-            .max()
-            .unwrap_or(0)
-            + 1;
-        let cells = item.iter().map(|c| Cell::from(&**c));
-        let row = Row::new(cells).height(height as u16);
-        let color = match item[4].as_str() {
-            "ERROR" => (Color::Red, Color::White),
-            "WARN" => (Color::LightYellow, Color::Black),
-            _ => (Color::Black, Color::White),
-        };
 
-        row.style(Style::default().bg(color.0).fg(color.1))
-    });
+    let rows = app.tabs[app.tab_index].items[app.get_view_buffer_range()]
+        .iter()
+        .map(|item| {
+            let height = item
+                .iter()
+                .map(|content| content.chars().filter(|c| *c == '\n').count())
+                .max()
+                .unwrap_or(0)
+                + 1;
+            let cells = item.iter().map(|c| Cell::from(&**c));
+            let row = Row::new(cells).height(height as u16);
+            let color = match item[4].as_str() {
+                "ERROR" => (Color::Red, Color::White),
+                "WARN" => (Color::LightYellow, Color::Black),
+                _ => (Color::Black, Color::White),
+            };
+
+            row.style(Style::default().bg(color.0).fg(color.1))
+        });
 
     let tabs = ratatui::widgets::Tabs::new(
         app.tabs

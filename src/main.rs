@@ -13,17 +13,20 @@ use std::io::stdout;
 mod parser;
 
 /// Application.
-pub mod app;
+mod app;
 use crate::app::App;
 use crate::app::ViewMode;
 
 /// Widget renderer.
-pub mod ui;
+mod ui;
 use crate::ui::render;
 
 /// Application updater.
-pub mod update;
+mod update;
 use crate::update::update;
+
+mod event;
+use crate::event::EventHandler;
 
 fn main() -> Result<()> {
     startup()?;
@@ -51,6 +54,7 @@ fn shutdown() -> Result<()> {
 fn run() -> Result<()> {
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
+    let events = EventHandler::new(1);
 
     let args = env::args();
     let args = args.into_iter().collect::<Vec<String>>();
@@ -62,13 +66,9 @@ fn run() -> Result<()> {
         None
     });
 
-    loop {
-        update(&mut app)?;
+    while app.running {
         terminal.draw(|f| render(f, &mut app))?;
-        // application exit
-        if app.should_quit {
-            break;
-        }
+        update(&events, &mut app)?;
     }
 
     Ok(())

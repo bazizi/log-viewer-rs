@@ -61,7 +61,9 @@ impl App {
         std::cmp::max(
             self.tabs[self.tab_index]
                 .selected_item
-                .saturating_sub(self.view_buffer_size / 2),
+                // It's better to have less items before the selected index than after it
+                // to avoid the selected item showing up at the bottom of the screen
+                .saturating_sub(self.view_buffer_size / 4),
             0,
         )
             ..std::cmp::min(

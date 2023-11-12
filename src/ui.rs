@@ -82,29 +82,29 @@ pub fn render(f: &mut Frame, app: &mut App) {
             row.style(Style::default().bg(color.0).fg(color.1))
         });
 
-    let tabs = ratatui::widgets::Tabs::new(
-        app.tabs
-            .iter()
-            .map(|tab| tab.file_path.clone())
-            .collect::<Vec<String>>(),
-    )
-    .block(Block::default().title("Tabs").borders(Borders::ALL))
-    .style(Style::default().white())
-    .highlight_style(Style::default().yellow())
-    .divider(ratatui::symbols::bar::FULL)
-    .select(app.tab_index);
-
-    f.render_widget(tabs, tabs_area);
-
     match app.view_mode {
         ViewMode::TableItem(item) => {
             let t = ratatui::widgets::Paragraph::new(&*app.tabs[app.tab_index].items[item][5])
                 .block(Block::default().title("Log entry").borders(Borders::ALL))
                 .style(Style::default().fg(Color::White).bg(Color::Black))
                 .wrap(Wrap { trim: false });
-            f.render_widget(t, tabs_area);
+            f.render_widget(t, table_area);
         }
         _ => {
+            let tabs = ratatui::widgets::Tabs::new(
+                app.tabs
+                    .iter()
+                    .map(|tab| tab.file_path.clone())
+                    .collect::<Vec<String>>(),
+            )
+            .block(Block::default().title("Tabs").borders(Borders::ALL))
+            .style(Style::default().white())
+            .highlight_style(Style::default().yellow())
+            .divider(ratatui::symbols::bar::FULL)
+            .select(app.tab_index);
+
+            f.render_widget(tabs, tabs_area);
+
             let t = Table::new(rows)
                 .header(header)
                 .block(

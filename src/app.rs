@@ -36,7 +36,7 @@ impl App {
                 }],
                 tab_index: 0,
                 selected_input: None,
-                view_buffer_size: 10,
+                view_buffer_size: 102,
             }
         } else {
             App {
@@ -51,7 +51,7 @@ impl App {
                 }],
                 tab_index: 0,
                 selected_input: None,
-                view_buffer_size: 10,
+                view_buffer_size: 102,
             }
         }
     }
@@ -73,28 +73,9 @@ impl App {
             )
     }
 
-    fn calculate_position_on_screen(&self) -> usize {
-        // The selected item is normally at the center of the current view unless
-        // it's positioned before the item at location  (view_buffer_size / 2) or
-        // after the item at location (lastItem -  view_buffer_size / 2)
-
-        let pos = if self.tabs[self.tab_index].selected_item < self.view_buffer_size / 2 {
-            self.tabs[self.tab_index].selected_item
-        } else if self.tabs[self.tab_index].selected_item
-            > self.tabs[self.tab_index]
-                .items
-                .len()
-                .saturating_sub(self.view_buffer_size / 2)
-        {
-            self.tabs[self.tab_index].selected_item.saturating_sub(
-                self.tabs[self.tab_index]
-                    .items
-                    .len()
-                    .saturating_sub(self.view_buffer_size),
-            )
-        } else {
-            self.view_buffer_size / 2
-        };
+    fn calculate_position_in_view_buffer(&self) -> usize {
+        // Location on screen is relative to the start of the view buffer
+        let pos = self.tabs[self.tab_index].selected_item - self.get_view_buffer_range().start;
 
         info!("Screen position calculated to be {}", pos);
 
@@ -102,40 +83,51 @@ impl App {
     }
 
     pub fn next(&mut self) {
-        self.tabs[self.tab_index].selected_item =
-            self.tabs[self.tab_index].selected_item.saturating_add(1);
+        self.tabs[self.tab_index].selected_item = std::cmp::min(
+            self.tabs[self.tab_index].selected_item.saturating_add(1),
+            self.tabs[self.tab_index].items.len() - 1,
+        );
 
-        self.state.select(Some(self.calculate_position_on_screen()));
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn previous(&mut self) {
         self.tabs[self.tab_index].selected_item =
             self.tabs[self.tab_index].selected_item.saturating_sub(1);
-        self.state.select(Some(self.calculate_position_on_screen()));
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn start(&mut self) {
         self.tabs[self.tab_index].selected_item = 0;
-        self.state.select(Some(self.calculate_position_on_screen()));
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn end(&mut self) {
         self.tabs[self.tab_index].selected_item = self.tabs[self.tab_index].items.len() - 1;
-        self.state.select(Some(self.calculate_position_on_screen()));
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn page_down(&mut self) {
-        self.tabs[self.tab_index].selected_item = self.tabs[self.tab_index]
-            .selected_item
-            .saturating_add(self.view_buffer_size);
-        self.state.select(Some(self.calculate_position_on_screen()));
+        self.tabs[self.tab_index].selected_item = std::cmp::min(
+            self.tabs[self.tab_index]
+                .selected_item
+                .saturating_add(self.view_buffer_size),
+            self.tabs[self.tab_index].items.len() - 1,
+        );
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn page_up(&mut self) {
         self.tabs[self.tab_index].selected_item = self.tabs[self.tab_index]
             .selected_item
             .saturating_sub(self.view_buffer_size);
-        self.state.select(Some(self.calculate_position_on_screen()));
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn switch_to_item_view(&mut self) {
@@ -163,7 +155,14 @@ impl App {
 
     pub fn next_tab(&mut self) {
         self.tab_index = (self.tab_index + 1) % self.tabs.len();
-        self.state.select(Some(self.calculate_position_on_screen()));
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
+    }
+
+    pub fn prev_tab(&mut self) {
+        self.tab_index = (self.tab_index + 1) % self.tabs.len();
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
     }
 }
 

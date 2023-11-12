@@ -59,6 +59,7 @@ pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
                 KeyCode::Enter => app.switch_to_item_view(),
                 KeyCode::Char('o') => app.load_files(),
                 KeyCode::Right => app.next_tab(),
+                KeyCode::Left => app.prev_tab(),
                 KeyCode::Down | KeyCode::Char('j') => app.next(),
                 KeyCode::Up | KeyCode::Char('k') => app.previous(),
 

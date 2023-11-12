@@ -54,7 +54,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
-    let header_cells = ["index", "date", "pid", "tid", "level", "log"]
+    let header_cells = ["date", "pid", "tid", "level", "log"]
         .iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
     let header = Row::new(header_cells)
@@ -101,7 +101,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             let t = ratatui::widgets::Paragraph::new(&*app.tabs[app.tab_index].items[item][5])
                 .block(Block::default().title("Log entry").borders(Borders::ALL))
                 .style(Style::default().fg(Color::White).bg(Color::Black))
-                .wrap(Wrap { trim: true });
+                .wrap(Wrap { trim: false });
             f.render_widget(t, tabs_area);
         }
         _ => {

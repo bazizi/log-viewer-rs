@@ -54,13 +54,13 @@ impl EventHandler {
                             }
                             CrosstermEvent::Mouse(e) => sender.send(Event::Mouse(e)),
                             CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
-                            _ => unimplemented!(),
+                            _ => sender.send(Event::Tick),
                         }
                         .expect("failed to send terminal event")
                     }
 
                     if last_tick.elapsed() >= tick_rate {
-                        // sender.send(Event::Tick).expect("failed to send tick event");
+                        sender.send(Event::Tick).expect("failed to send tick event");
                         last_tick = Instant::now();
                     }
                 }
@@ -78,10 +78,6 @@ impl EventHandler {
     /// This function will always block the current thread if
     /// there is no data available and it's possible for more data to be sent.
     pub fn next(&self) -> Result<Event> {
-        if let Ok(event) = self.receiver.try_recv() {
-            return Ok(event);
-        }
-
-        Ok(Event::Tick)
+        Ok(self.receiver.recv()?)
     }
 }

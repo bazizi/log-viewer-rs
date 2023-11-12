@@ -54,7 +54,7 @@ fn shutdown() -> Result<()> {
 fn run() -> Result<()> {
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
-    let events = EventHandler::new(1);
+    let events = EventHandler::new(250);
 
     let args = env::args();
     let args = args.into_iter().collect::<Vec<String>>();

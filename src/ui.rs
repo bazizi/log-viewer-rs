@@ -54,7 +54,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
-    let header_cells = ["date", "pid", "tid", "level", "log"]
+    let header_cells = ["index", "date", "pid", "tid", "level", "log"]
         .iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
     let header = Row::new(header_cells)
@@ -115,7 +115,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
                 .highlight_symbol(">> ")
                 .widths(&[
-                    Constraint::Length(6),
+                    Constraint::Percentage(0),
                     Constraint::Length(24),
                     Constraint::Length(6),
                     Constraint::Length(6),

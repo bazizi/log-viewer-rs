@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::ops::Range;
 
 use ratatui::widgets::TableState;
@@ -15,26 +16,33 @@ pub enum SelectedInput {
 pub struct App {
     pub running: bool,
     pub state: TableState,
-    pub view_mode: ViewMode,
+
+    // we keep a history of view modes to be able to switch back
     pub tabs: Vec<Tab>,
-    pub tab_index: usize,
+    pub selected_tab_index: usize,
+    pub view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
     pub selected_input: Option<SelectedInput>,
     pub view_buffer_size: usize,
 }
 
 impl App {
     pub fn new(file_path: Option<&String>) -> App {
+        let mut view_mode = VecDeque::new();
+        view_mode.push_back(ViewMode::Table);
+
         if let Some(file_path) = file_path {
             App {
                 running: true,
                 state: TableState::default(),
-                view_mode: ViewMode::Table,
+                view_mode: view_mode,
                 tabs: vec![Tab {
                     file_path: file_path.clone(),
                     items: parser::parse_log_by_path(&file_path, 0).unwrap(),
-                    selected_item: 0,
+                    selected_item_index: 0,
+                    filtered_view_items: vec![],
+                    selected_filtered_view_item_index: 0,
                 }],
-                tab_index: 0,
+                selected_tab_index: 0,
                 selected_input: None,
                 view_buffer_size: 102,
             }
@@ -43,13 +51,15 @@ impl App {
                 running: true,
                 // TODO: Add a help page on startup
                 state: TableState::default(),
-                view_mode: ViewMode::Table,
+                view_mode: view_mode,
                 tabs: vec![Tab {
                     file_path: "Help".to_owned(),
                     items: vec![],
-                    selected_item: 0,
+                    selected_item_index: 0,
+                    filtered_view_items: vec![],
+                    selected_filtered_view_item_index: 0,
                 }],
-                tab_index: 0,
+                selected_tab_index: 0,
                 selected_input: None,
                 view_buffer_size: 102,
             }
@@ -57,27 +67,42 @@ impl App {
     }
 
     pub fn get_view_buffer_range(&self) -> Range<usize> {
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
+        let mut index = self.tabs[self.selected_tab_index].selected_item_index;
+        let mut num_items = self.tabs[self.selected_tab_index].items.len();
+
+        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            index = self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
+            num_items = self.tabs[self.selected_tab_index].filtered_view_items.len();
+        }
+
         // gets the view range based on the view_buffer_size
         std::cmp::max(
-            self.tabs[self.tab_index]
-                .selected_item
+            index
                 // It's better to have less items before the selected index than after it
                 // to avoid the selected item showing up at the bottom of the screen
                 .saturating_sub(self.view_buffer_size / 4),
             0,
         )
             ..std::cmp::min(
-                self.tabs[self.tab_index]
-                    .selected_item
-                    .saturating_add(self.view_buffer_size / 2)
-                    + 1,
-                self.tabs[self.tab_index].items.len(),
+                index.saturating_add(self.view_buffer_size / 2) + 1,
+                num_items,
             )
     }
 
     fn calculate_position_in_view_buffer(&self) -> usize {
         // Location on screen is relative to the start of the view buffer
-        let pos = self.tabs[self.tab_index].selected_item - self.get_view_buffer_range().start;
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
+
+        let pos = if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            self.tabs[self.selected_tab_index].selected_filtered_view_item_index
+                - self.get_view_buffer_range().start
+        } else {
+            self.tabs[self.selected_tab_index].selected_item_index
+                - self.get_view_buffer_range().start
+        };
 
         info!("Screen position calculated to be {}", pos);
 
@@ -85,57 +110,114 @@ impl App {
     }
 
     pub fn next(&mut self) {
-        self.tabs[self.tab_index].selected_item = std::cmp::min(
-            self.tabs[self.tab_index].selected_item.saturating_add(1),
-            self.tabs[self.tab_index].items.len() - 1,
-        );
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
+
+        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            let num_items = self.tabs[self.selected_tab_index].filtered_view_items.len();
+            let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
+            *index = std::cmp::min(index.saturating_add(1), num_items - 1);
+        } else {
+            let num_items = self.tabs[self.selected_tab_index].items.len();
+            let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
+            *index = std::cmp::min(index.saturating_add(1), num_items - 1);
+        }
 
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn previous(&mut self) {
-        self.tabs[self.tab_index].selected_item =
-            self.tabs[self.tab_index].selected_item.saturating_sub(1);
-        self.state
-            .select(Some(self.calculate_position_in_view_buffer()));
-    }
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
 
-    pub fn start(&mut self) {
-        self.tabs[self.tab_index].selected_item = 0;
-        self.state
-            .select(Some(self.calculate_position_in_view_buffer()));
-    }
+        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
+            *index = std::cmp::max(index.saturating_sub(1), 0);
+        } else {
+            let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
+            *index = std::cmp::max(index.saturating_sub(1), 0);
+        }
 
-    pub fn end(&mut self) {
-        self.tabs[self.tab_index].selected_item = self.tabs[self.tab_index].items.len() - 1;
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn page_down(&mut self) {
-        self.tabs[self.tab_index].selected_item = std::cmp::min(
-            self.tabs[self.tab_index]
-                .selected_item
-                .saturating_add(self.view_buffer_size),
-            self.tabs[self.tab_index].items.len() - 1,
-        );
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
+
+        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            let num_items = self.tabs[self.selected_tab_index].filtered_view_items.len();
+            let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
+            *index = std::cmp::min(index.saturating_add(self.view_buffer_size), num_items - 1);
+        } else {
+            let num_items = self.tabs[self.selected_tab_index].items.len();
+            let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
+            *index = std::cmp::min(index.saturating_add(self.view_buffer_size), num_items - 1);
+        }
+
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn page_up(&mut self) {
-        self.tabs[self.tab_index].selected_item = self.tabs[self.tab_index]
-            .selected_item
-            .saturating_sub(self.view_buffer_size);
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
+
+        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
+            *index = std::cmp::max(index.saturating_sub(self.view_buffer_size), 0);
+        } else {
+            let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
+            *index = std::cmp::max(index.saturating_sub(self.view_buffer_size), 0);
+        }
+
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
+    }
+
+    pub fn start(&mut self) {
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
+
+        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            self.tabs[self.selected_tab_index].selected_filtered_view_item_index = 0
+        } else {
+            self.tabs[self.selected_tab_index].selected_item_index = 0
+        }
+
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
+    }
+
+    pub fn end(&mut self) {
+        // If we're in filtered view, we should use the filtered view index
+        // If not, we use the normal tab index
+
+        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+            self.tabs[self.selected_tab_index].selected_filtered_view_item_index =
+                self.tabs[self.selected_tab_index].filtered_view_items.len() - 1;
+        } else {
+            self.tabs[self.selected_tab_index].selected_item_index =
+                self.tabs[self.selected_tab_index].items.len() - 1;
+        }
+
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn switch_to_item_view(&mut self) {
-        match self.view_mode {
-            ViewMode::Table => {
-                self.view_mode = ViewMode::TableItem(self.tabs[self.tab_index].selected_item)
+        match self.view_mode.back() {
+            Some(ViewMode::Table) => {
+                self.view_mode.push_back(ViewMode::TableItem(
+                    self.tabs[self.selected_tab_index].selected_item_index,
+                ));
+            }
+            Some(ViewMode::FilteredView) => {
+                self.view_mode.push_back(ViewMode::TableItem(
+                    self.tabs[self.selected_tab_index].selected_filtered_view_item_index,
+                ));
             }
             _ => {}
         }
@@ -150,19 +232,21 @@ impl App {
         self.tabs.push(Tab {
             items: parser::parse_log_by_path(&file_path, 0).unwrap(),
             file_path: file_path,
-            selected_item: 0,
+            selected_item_index: 0,
+            filtered_view_items: vec![],
+            selected_filtered_view_item_index: 0,
         });
-        self.tab_index = self.tabs.len() - 1;
+        self.selected_tab_index = self.tabs.len() - 1;
     }
 
     pub fn next_tab(&mut self) {
-        self.tab_index = (self.tab_index + 1) % self.tabs.len();
+        self.selected_tab_index = (self.selected_tab_index + 1) % self.tabs.len();
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn prev_tab(&mut self) {
-        self.tab_index = (self.tab_index + 1) % self.tabs.len();
+        self.selected_tab_index = (self.selected_tab_index + 1) % self.tabs.len();
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
@@ -170,11 +254,15 @@ impl App {
 
 pub enum ViewMode {
     Table,
+    FilteredView,
+    SearchView,
     TableItem(usize /* index */),
 }
 
 pub struct Tab {
     pub file_path: String,
     pub items: Vec<LogEntry>,
-    pub selected_item: usize,
+    pub selected_item_index: usize,
+    pub filtered_view_items: Vec<LogEntry>,
+    pub selected_filtered_view_item_index: usize,
 }

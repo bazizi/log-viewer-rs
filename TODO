@@ -1,10 +1,8 @@
-- Help tab
 - Open/browse
 - [F]ilter mode
-- Search mode
-
+- [S]earch mode
+- Filter sessions (dropdown)
+- [T]ail mode
 - Custom line parser
 - Smart JSON
 - [G]oto line
-- Filter [s]essions
-- [T]ail mode

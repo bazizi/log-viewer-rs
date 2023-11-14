@@ -1,4 +1,4 @@
-use crate::{app::SelectedInput, App, ViewMode};
+use crate::{app::SelectedInput, parser::LogEntryIndices, App, ViewMode};
 
 use ratatui::{
     layout::{Constraint, Layout},
@@ -46,7 +46,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         );
     }
 
-    let filter = Paragraph::new(filter_text.unwrap_or("".to_owned()))
+    let filter = Paragraph::new(filter_text.clone().unwrap_or("".to_owned()))
         .block(Block::default().borders(Borders::ALL).title("[F]ilter"));
     f.render_widget(filter, filter_area);
 
@@ -62,29 +62,23 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .height(1)
         .bottom_margin(0);
 
-    let rows = app.tabs[app.tab_index].items[app.get_view_buffer_range()]
-        .iter()
-        .map(|item| {
-            let height = item
-                .iter()
-                .map(|content| content.chars().filter(|c| *c == '\n').count())
-                .max()
-                .unwrap_or(0)
-                + 1;
-            let cells = item.iter().map(|c| Cell::from(&**c));
-            let row = Row::new(cells).height(height as u16);
-            let color = match item[4].as_str() {
-                "ERROR" => (Color::Red, Color::White),
-                "WARN" => (Color::LightYellow, Color::Black),
-                _ => (Color::Black, Color::White),
-            };
+    let mut items = &app.tabs[app.selected_tab_index].items;
 
-            row.style(Style::default().bg(color.0).fg(color.1))
-        });
+    if let Some(ViewMode::FilteredView) = app.view_mode.back() {
+        // we're in filtered view mode so show filtered items instead of all items
+        items = &app.tabs[app.selected_tab_index].filtered_view_items;
+    } else if let Some(ViewMode::TableItem(_)) = app.view_mode.back() {
+        if app.view_mode.len() >= 2 {
+            if let Some(ViewMode::FilteredView) = app.view_mode.get(app.view_mode.len() - 2) {
+                // We're viewing a filtered view item
+                items = &app.tabs[app.selected_tab_index].filtered_view_items;
+            }
+        }
+    }
 
-    match app.view_mode {
-        ViewMode::TableItem(item) => {
-            let t = ratatui::widgets::Paragraph::new(&*app.tabs[app.tab_index].items[item][5])
+    match app.view_mode.back() {
+        Some(ViewMode::TableItem(item)) => {
+            let t = ratatui::widgets::Paragraph::new(&*items[*item][LogEntryIndices::LOG as usize])
                 .block(Block::default().title("Log entry").borders(Borders::ALL))
                 .style(Style::default().fg(Color::White).bg(Color::Black))
                 .wrap(Wrap { trim: false });
@@ -101,16 +95,34 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .style(Style::default().white())
             .highlight_style(Style::default().yellow())
             .divider(ratatui::symbols::bar::FULL)
-            .select(app.tab_index);
+            .select(app.selected_tab_index);
 
             f.render_widget(tabs, tabs_area);
+
+            let rows = items[app.get_view_buffer_range()].iter().map(|item| {
+                let height = item
+                    .iter()
+                    .map(|content| content.chars().filter(|c| *c == '\n').count())
+                    .max()
+                    .unwrap_or(0)
+                    + 1;
+                let cells = item.iter().map(|c| Cell::from(&**c));
+                let row = Row::new(cells).height(height as u16);
+                let color = match item[LogEntryIndices::LEVEL as usize].as_str() {
+                    "ERROR" => (Color::Red, Color::White),
+                    "WARN" => (Color::LightYellow, Color::Black),
+                    _ => (Color::Black, Color::White),
+                };
+
+                row.style(Style::default().bg(color.0).fg(color.1))
+            });
 
             let t = Table::new(rows)
                 .header(header)
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
-                        .title(app.tabs[app.tab_index].file_path.clone()),
+                        .title(app.tabs[app.selected_tab_index].file_path.clone()),
                 )
                 .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
                 .highlight_symbol(">> ")

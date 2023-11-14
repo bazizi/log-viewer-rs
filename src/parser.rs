@@ -6,6 +6,15 @@ use log::{error, info};
 
 pub type LogEntry = Vec<String>;
 
+pub enum LogEntryIndices {
+    _ID,
+    _DATE,
+    _PID,
+    _TID,
+    LEVEL,
+    LOG,
+}
+
 pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEntry>> {
     info!("Attempting to parse log file [{}]...", log_path);
     let re = regex::Regex::new(

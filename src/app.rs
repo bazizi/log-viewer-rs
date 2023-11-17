@@ -8,6 +8,8 @@ use crate::parser;
 use crate::parser::LogEntry;
 use log::info;
 
+const DEFAULT_VIEW_BUFFER_SIZE: usize = 150;
+
 pub enum SelectedInput {
     Filter(String),
     Search(String),
@@ -44,7 +46,7 @@ impl App {
                 }],
                 selected_tab_index: 0,
                 selected_input: None,
-                view_buffer_size: 102,
+                view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             }
         } else {
             App {
@@ -61,7 +63,7 @@ impl App {
                 }],
                 selected_tab_index: 0,
                 selected_input: None,
-                view_buffer_size: 102,
+                view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             }
         }
     }

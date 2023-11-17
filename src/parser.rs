@@ -36,6 +36,7 @@ pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEnt
         let mut log = String::new();
         let line = lines[line_num];
         if line.is_empty() {
+            line_num += 1;
             continue;
         }
 

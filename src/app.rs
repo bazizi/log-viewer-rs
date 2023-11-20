@@ -5,7 +5,7 @@ use ratatui::widgets::TableState;
 use rfd::FileDialog;
 
 use crate::parser;
-use crate::parser::LogEntry;
+use crate::parser::{LogEntry, LogEntryIndices};
 use log::info;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 150;
@@ -111,34 +111,93 @@ impl App {
         pos
     }
 
-    pub fn next(&mut self) {
+    pub fn next(&mut self, search: Option<String>) {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
-
         if let Some(ViewMode::FilteredView) = self.view_mode.back() {
-            let num_items = self.tabs[self.selected_tab_index].filtered_view_items.len();
+            let num_items = self.tabs[self.selected_tab_index].filtered_view_items.len() - 1;
             let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
-            *index = std::cmp::min(index.saturating_add(1), num_items - 1);
+            *index = std::cmp::min(index.saturating_add(1), num_items);
         } else {
-            let num_items = self.tabs[self.selected_tab_index].items.len();
-            let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
-            *index = std::cmp::min(index.saturating_add(1), num_items - 1);
+            let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
+                // normal mode
+                let index = self.tabs[self.selected_tab_index].selected_item_index;
+                std::cmp::min(
+                    index.saturating_add(1),
+                    self.tabs[self.selected_tab_index].items.len() - 1,
+                )
+            } else {
+                // search mode
+                let mut index = self.tabs[self.selected_tab_index].selected_item_index;
+                let mut final_index = index;
+                loop {
+                    index = std::cmp::min(
+                        index.saturating_add(1),
+                        self.tabs[self.selected_tab_index].items.len() - 1,
+                    );
+
+                    if self.tabs[self.selected_tab_index].items[index]
+                        [LogEntryIndices::LOG as usize]
+                        .to_lowercase()
+                        .contains(&search.as_ref().unwrap().to_lowercase())
+                    {
+                        final_index = index;
+                        break;
+                    }
+
+                    if index == 0 {
+                        // reach the begining
+                        break;
+                    }
+                }
+
+                final_index
+            };
+
+            self.tabs[self.selected_tab_index].selected_item_index = new_index;
         }
 
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
-    pub fn previous(&mut self) {
+    pub fn previous(&mut self, search: Option<String>) {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
-
         if let Some(ViewMode::FilteredView) = self.view_mode.back() {
             let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
             *index = std::cmp::max(index.saturating_sub(1), 0);
         } else {
-            let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
-            *index = std::cmp::max(index.saturating_sub(1), 0);
+            let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
+                // normal mode
+                let index = self.tabs[self.selected_tab_index].selected_item_index;
+                std::cmp::max(index.saturating_sub(1), 0)
+            } else {
+                // search mode
+                let mut index = self.tabs[self.selected_tab_index].selected_item_index;
+                let mut final_index = index;
+                loop {
+                    index = std::cmp::max(index.saturating_sub(1), 0);
+
+                    if self.tabs[self.selected_tab_index].items[index]
+                        [LogEntryIndices::LOG as usize]
+                        .to_lowercase()
+                        .contains(&search.as_ref().unwrap().to_lowercase())
+                    {
+                        final_index = index;
+                        break;
+                    }
+
+                    if index == 0 {
+                        // reach the begining
+                        break;
+                    }
+                }
+
+                final_index
+            };
+
+            self.tabs[self.selected_tab_index].selected_item_index = new_index;
         }
 
         self.state
@@ -242,13 +301,13 @@ impl App {
     }
 
     pub fn next_tab(&mut self) {
-        self.selected_tab_index = (self.selected_tab_index + 1) % self.tabs.len();
+        self.selected_tab_index = self.selected_tab_index.saturating_add(1) % self.tabs.len();
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn prev_tab(&mut self) {
-        self.selected_tab_index = (self.selected_tab_index + 1) % self.tabs.len();
+        self.selected_tab_index = self.selected_tab_index.saturating_sub(1);
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }

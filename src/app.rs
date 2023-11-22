@@ -145,8 +145,8 @@ impl App {
                         break;
                     }
 
-                    if index == 0 {
-                        // reach the begining
+                    if index == (self.tabs[self.selected_tab_index].items.len() - 1) {
+                        // reached the end
                         break;
                     }
                 }
@@ -189,7 +189,7 @@ impl App {
                     }
 
                     if index == 0 {
-                        // reach the begining
+                        // reached the beginning
                         break;
                     }
                 }

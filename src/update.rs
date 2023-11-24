@@ -80,8 +80,8 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
             KeyCode::Down => app.next(None),
             KeyCode::Up => app.previous(None),
-            KeyCode::PageDown => app.page_down(),
-            KeyCode::PageUp => app.page_up(),
+            KeyCode::PageDown => app.skipping_next(),
+            KeyCode::PageUp => app.skipping_prev(),
             KeyCode::Home => app.start(),
             KeyCode::End => app.end(),
 
@@ -114,8 +114,8 @@ fn handle_search_mode(key_code: KeyCode, app: &mut App) {
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
             KeyCode::Down => app.next(Some(current_input_copy)),
             KeyCode::Up => app.previous(Some(current_input_copy)),
-            KeyCode::PageDown => app.page_down(),
-            KeyCode::PageUp => app.page_up(),
+            KeyCode::PageDown => app.skipping_next(),
+            KeyCode::PageUp => app.skipping_prev(),
             KeyCode::Home => app.start(),
             KeyCode::End => app.end(),
 
@@ -153,8 +153,8 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
         KeyCode::Left => app.prev_tab(),
         KeyCode::Down | KeyCode::Char('j') => app.next(None),
         KeyCode::Up | KeyCode::Char('k') => app.previous(None),
-        KeyCode::PageDown => app.page_down(),
-        KeyCode::PageUp => app.page_up(),
+        KeyCode::PageDown => app.skipping_next(),
+        KeyCode::PageUp => app.skipping_prev(),
 
         KeyCode::Char('f') => {
             app.selected_input = Some(SelectedInput::Filter("".to_owned()));

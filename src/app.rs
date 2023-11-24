@@ -9,6 +9,7 @@ use crate::parser::{LogEntry, LogEntryIndices};
 use log::info;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 150;
+const DEFAULT_SKIP_SIZE: usize = 5;
 
 pub enum SelectedInput {
     Filter(String),
@@ -204,34 +205,34 @@ impl App {
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
-    pub fn page_down(&mut self) {
+    pub fn skipping_next(&mut self) {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
         if let Some(ViewMode::FilteredView) = self.view_mode.back() {
             let num_items = self.tabs[self.selected_tab_index].filtered_view_items.len();
             let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
-            *index = std::cmp::min(index.saturating_add(self.view_buffer_size), num_items - 1);
+            *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
         } else {
             let num_items = self.tabs[self.selected_tab_index].items.len();
             let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
-            *index = std::cmp::min(index.saturating_add(self.view_buffer_size), num_items - 1);
+            *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
         }
 
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
-    pub fn page_up(&mut self) {
+    pub fn skipping_prev(&mut self) {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
         if let Some(ViewMode::FilteredView) = self.view_mode.back() {
             let index = &mut self.tabs[self.selected_tab_index].selected_filtered_view_item_index;
-            *index = std::cmp::max(index.saturating_sub(self.view_buffer_size), 0);
+            *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
         } else {
             let index = &mut self.tabs[self.selected_tab_index].selected_item_index;
-            *index = std::cmp::max(index.saturating_sub(self.view_buffer_size), 0);
+            *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
         }
 
         self.state

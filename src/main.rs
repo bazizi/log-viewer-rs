@@ -1,7 +1,9 @@
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, SetTitle,
+    },
 };
 
 use ratatui::{backend::CrosstermBackend, Terminal};
@@ -58,6 +60,15 @@ fn run() -> Result<()> {
 
     let args = env::args();
     let args = args.into_iter().collect::<Vec<String>>();
+    execute!(
+        io::stdout(),
+        SetTitle(
+            args.iter()
+                .map(|e| e.clone())
+                .reduce(|acc, e| { acc.to_string() + &e })
+                .unwrap()
+        )
+    )?;
 
     // create app and run it
     let mut app = App::new(if args.len() == 2 {

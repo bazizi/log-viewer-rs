@@ -7,9 +7,9 @@ use log::{error, info};
 pub type LogEntry = Vec<String>;
 
 pub enum LogEntryIndices {
-    _ID,
+    // _ID,
     _DATE,
-    _PID,
+    // _PID,
     _TID,
     LEVEL,
     LOG,
@@ -85,10 +85,10 @@ pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEnt
         }
 
         log_entries.push(vec![
-            id.to_string(),
+            // id.to_string(),
             // _session.to_string(),
             date.to_string(),
-            pid.to_string(),
+            // pid.to_string(),
             tid.to_string(),
             level.to_string(),
             log.to_string(),

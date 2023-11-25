@@ -13,20 +13,80 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Length(3),
-                Constraint::Length(3),
-                Constraint::Min(0),
+                Constraint::Length(3),      // top menu area
+                Constraint::Length(3),      // search/filter
+                Constraint::Length(3),      // Tabs
+                Constraint::Percentage(10), // preview
+                Constraint::Percentage(90), // table
             ]
             .as_ref(),
         )
         .split(f.size());
 
-    let (tabs_area, table_area) = (areas[1], areas[2]);
+    {
+        let menu_area = areas[0];
+        let menu = [
+            "[o]pen",
+            "[t]ail",
+            "[s]earch",
+            "[f]ilter",
+            "[c]opy",
+            "move [Arrow keys]",
+            "select [enter]",
+            "[b]ack [Esc]",
+            "[q]uit",
+        ];
+
+        let mut menu_item_constraints = menu
+            .iter()
+            .map(|item| Constraint::Percentage(100 / menu.len() as u16))
+            .collect::<Vec<Constraint>>();
+
+        let menu_item_area = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(menu_item_constraints)
+            .split(menu_area);
+
+        for i in 0..menu.len() {
+            let borders = if i == menu.len() - 1 {
+                Borders::ALL
+            } else {
+                Borders::LEFT | Borders::TOP | Borders::BOTTOM
+            };
+
+            let menu_item = Paragraph::new(menu[i])
+                .block(Block::default().borders(borders))
+                .alignment(ratatui::layout::Alignment::Center)
+                .on_blue();
+            f.render_widget(menu_item, menu_item_area[i]);
+        }
+    }
+
+    let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
+
+    {
+        let preview = Paragraph::new(
+            app.tabs[app.selected_tab_index].items
+                [app.tabs[app.selected_tab_index].selected_item_index]
+                [LogEntryIndices::LOG as usize]
+                .clone(),
+        )
+        .wrap(Wrap { trim: false })
+        .block(
+            Block::default()
+                .borders(Borders::TOP | Borders::BOTTOM)
+                .title(" [Preview] ")
+                .title_alignment(ratatui::layout::Alignment::Center),
+        );
+        f.render_widget(preview, preview_area);
+
+        // f.render_widget(, area)
+    }
 
     let input_area = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-        .split(areas[0]);
+        .split(areas[1]);
 
     let (filter_area, search_area) = (input_area[0], input_area[1]);
 
@@ -54,7 +114,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
-    let header_cells = ["index", "date", "pid", "tid", "level", "log"]
+    let header_cells = ["date", "tid", "level", "log"]
         .iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
     let header = Row::new(header_cells)
@@ -79,7 +139,11 @@ pub fn render(f: &mut Frame, app: &mut App) {
     match app.view_mode.back() {
         Some(ViewMode::TableItem(item)) => {
             let t = ratatui::widgets::Paragraph::new(&*items[*item][LogEntryIndices::LOG as usize])
-                .block(Block::default().title("Log entry").borders(Borders::ALL))
+                .block(
+                    Block::default()
+                        .title("Log entry")
+                        .borders(Borders::TOP | Borders::BOTTOM),
+                )
                 .style(Style::default().fg(Color::White).bg(Color::Black))
                 .wrap(Wrap { trim: false });
             f.render_widget(t, table_area);
@@ -88,7 +152,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             let tabs = ratatui::widgets::Tabs::new(
                 app.tabs
                     .iter()
-                    .map(|tab| tab.file_path.clone())
+                    .map(|tab| tab.name.clone())
                     .collect::<Vec<String>>(),
             )
             .block(Block::default().title("Tabs").borders(Borders::ALL))
@@ -122,14 +186,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
-                        .title(app.tabs[app.selected_tab_index].file_path.clone()),
+                        .title(app.tabs[app.selected_tab_index].name.clone()),
                 )
                 .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
                 .highlight_symbol(">> ")
                 .widths(&[
-                    Constraint::Percentage(0),
                     Constraint::Length(24),
-                    Constraint::Length(6),
                     Constraint::Length(6),
                     Constraint::Length(6),
                     Constraint::Percentage(100),

@@ -8,7 +8,7 @@ use crate::parser;
 use crate::parser::{LogEntry, LogEntryIndices};
 use log::info;
 
-const DEFAULT_VIEW_BUFFER_SIZE: usize = 150;
+const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
 const DEFAULT_SKIP_SIZE: usize = 5;
 
 pub enum SelectedInput {
@@ -26,6 +26,7 @@ pub struct App {
     pub view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
     pub selected_input: Option<SelectedInput>,
     pub view_buffer_size: usize,
+    pub tail_enabled: bool, // TODO: add tailing support
 }
 
 impl App {
@@ -39,7 +40,12 @@ impl App {
                 state: TableState::default(),
                 view_mode: view_mode,
                 tabs: vec![Tab {
-                    file_path: file_path.clone(),
+                    name: std::path::Path::new(file_path.clone().as_str())
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
                     items: parser::parse_log_by_path(&file_path, 0).unwrap(),
                     selected_item_index: 0,
                     filtered_view_items: vec![],
@@ -48,6 +54,7 @@ impl App {
                 selected_tab_index: 0,
                 selected_input: None,
                 view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
+                tail_enabled: false,
             }
         } else {
             App {
@@ -55,16 +62,11 @@ impl App {
                 // TODO: Add a help page on startup
                 state: TableState::default(),
                 view_mode: view_mode,
-                tabs: vec![Tab {
-                    file_path: "Help".to_owned(),
-                    items: vec![],
-                    selected_item_index: 0,
-                    filtered_view_items: vec![],
-                    selected_filtered_view_item_index: 0,
-                }],
+                tabs: vec![],
                 selected_tab_index: 0,
                 selected_input: None,
                 view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
+                tail_enabled: false,
             }
         }
     }
@@ -81,15 +83,9 @@ impl App {
         }
 
         // gets the view range based on the view_buffer_size
-        std::cmp::max(
-            index
-                // It's better to have less items before the selected index than after it
-                // to avoid the selected item showing up at the bottom of the screen
-                .saturating_sub(self.view_buffer_size / 4),
-            0,
-        )
+        std::cmp::max(index.saturating_sub(self.view_buffer_size / 2), 0)
             ..std::cmp::min(
-                index.saturating_add(self.view_buffer_size / 2) + 1,
+                index.saturating_add(3 * self.view_buffer_size / 2) + 1,
                 num_items,
             )
     }
@@ -293,7 +289,12 @@ impl App {
         let file_path = file.to_str().unwrap().to_string();
         self.tabs.push(Tab {
             items: parser::parse_log_by_path(&file_path, 0).unwrap(),
-            file_path: file_path,
+            name: std::path::Path::new(file_path.clone().as_str())
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
             selected_item_index: 0,
             filtered_view_items: vec![],
             selected_filtered_view_item_index: 0,
@@ -322,7 +323,7 @@ pub enum ViewMode {
 }
 
 pub struct Tab {
-    pub file_path: String,
+    pub name: String,
     pub items: Vec<LogEntry>,
     pub selected_item_index: usize,
     pub filtered_view_items: Vec<LogEntry>,

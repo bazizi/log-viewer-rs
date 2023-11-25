@@ -60,28 +60,31 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .on_blue();
             f.render_widget(menu_item, menu_item_area[i]);
         }
+
+        if app.tabs.is_empty() {
+            return;
+        }
     }
 
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
 
-    {
-        let preview = Paragraph::new(
-            app.tabs[app.selected_tab_index].items
-                [app.tabs[app.selected_tab_index].selected_item_index]
-                [LogEntryIndices::LOG as usize]
-                .clone(),
-        )
-        .wrap(Wrap { trim: false })
-        .block(
-            Block::default()
-                .borders(Borders::TOP | Borders::BOTTOM)
-                .title(" [Preview] ")
-                .title_alignment(ratatui::layout::Alignment::Center),
-        );
-        f.render_widget(preview, preview_area);
-
-        // f.render_widget(, area)
-    }
+    let text = if let Some(SelectedInput::Filter(_filter_text)) = &app.selected_input {
+        app.tabs[app.selected_tab_index].filtered_view_items
+            [app.tabs[app.selected_tab_index].selected_filtered_view_item_index]
+            [LogEntryIndices::LOG as usize]
+            .clone()
+    } else {
+        app.tabs[app.selected_tab_index].items[app.tabs[app.selected_tab_index].selected_item_index]
+            [LogEntryIndices::LOG as usize]
+            .clone()
+    };
+    let preview = Paragraph::new(text).wrap(Wrap { trim: false }).block(
+        Block::default()
+            .borders(Borders::TOP | Borders::BOTTOM)
+            .title(" [Preview] ")
+            .title_alignment(ratatui::layout::Alignment::Center),
+    );
+    f.render_widget(preview, preview_area);
 
     let input_area = Layout::default()
         .direction(Direction::Horizontal)

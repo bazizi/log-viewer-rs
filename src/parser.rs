@@ -18,7 +18,7 @@ pub enum LogEntryIndices {
 pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEntry>> {
     info!("Attempting to parse log file [{}]...", log_path);
     let re = regex::Regex::new(
-        r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s+(?P<pid>\d+)\s+TID:\s+(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
+        r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
     )?;
 
     let mut line_num = 0;

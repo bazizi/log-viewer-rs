@@ -69,10 +69,17 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
 
     let text = if let Some(SelectedInput::Filter(_filter_text)) = &app.selected_input {
-        app.tabs[app.selected_tab_index].filtered_view_items
-            [app.tabs[app.selected_tab_index].selected_filtered_view_item_index]
-            [LogEntryIndices::LOG as usize]
-            .clone()
+        if app.tabs[app.selected_tab_index]
+            .filtered_view_items
+            .is_empty()
+        {
+            "".to_string()
+        } else {
+            app.tabs[app.selected_tab_index].filtered_view_items
+                [app.tabs[app.selected_tab_index].selected_filtered_view_item_index]
+                [LogEntryIndices::LOG as usize]
+                .clone()
+        }
     } else {
         app.tabs[app.selected_tab_index].items[app.tabs[app.selected_tab_index].selected_item_index]
             [LogEntryIndices::LOG as usize]

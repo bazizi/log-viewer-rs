@@ -47,11 +47,17 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
     handle_normal_mode(key.code, app);
 }
 
-fn filter_by_current_input(current_input: String, app: &mut App) {
+fn filter_by_current_input(current_input: String, app: &mut App, search_all: bool) {
     // User is typing in filter mode so reset the cursors and update filtered items
     app.tabs[app.selected_tab_index].selected_filtered_view_item_index = 0;
-    app.tabs[app.selected_tab_index].filtered_view_items = app.tabs[app.selected_tab_index]
-        .items
+
+    let items = if search_all {
+        &app.tabs[app.selected_tab_index].items
+    } else {
+        &app.tabs[app.selected_tab_index].filtered_view_items
+    };
+
+    app.tabs[app.selected_tab_index].filtered_view_items = items
         .iter()
         .filter(|item| {
             current_input.trim().is_empty()
@@ -68,11 +74,11 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
         match key_code {
             KeyCode::Char(c) => {
                 current_input.push(c);
-                filter_by_current_input(current_input.clone(), app);
+                filter_by_current_input(current_input.clone(), app, false);
             }
             KeyCode::Backspace => {
                 current_input.pop();
-                filter_by_current_input(current_input.clone(), app);
+                filter_by_current_input(current_input.clone(), app, true);
             }
             KeyCode::Enter => app.switch_to_item_view(),
 
@@ -157,12 +163,20 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
         KeyCode::PageUp => app.skipping_prev(),
 
         KeyCode::Char('f') => {
+            if app.tabs.is_empty() {
+                return;
+            }
+
             app.selected_input = Some(SelectedInput::Filter("".to_owned()));
             app.tabs[app.selected_tab_index].filtered_view_items =
                 app.tabs[app.selected_tab_index].items.clone();
             app.view_mode.push_back(ViewMode::FilteredView);
         }
         KeyCode::Char('s') => {
+            if app.tabs.is_empty() {
+                return;
+            }
+
             app.selected_input = Some(SelectedInput::Search("".to_owned()));
             app.view_mode.push_back(ViewMode::SearchView);
         }

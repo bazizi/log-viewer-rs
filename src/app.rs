@@ -72,6 +72,10 @@ impl App {
     }
 
     pub fn get_view_buffer_range(&self) -> Range<usize> {
+        if self.tabs.is_empty() {
+            return 0..0;
+        }
+
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
         let mut index = self.tabs[self.selected_tab_index].selected_item_index;
@@ -91,6 +95,10 @@ impl App {
     }
 
     fn calculate_position_in_view_buffer(&self) -> usize {
+        if self.tabs.is_empty() {
+            return 0;
+        }
+
         // Location on screen is relative to the start of the view buffer
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
@@ -109,6 +117,10 @@ impl App {
     }
 
     pub fn next(&mut self, search: Option<String>) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
         if let Some(ViewMode::FilteredView) = self.view_mode.back() {
@@ -159,6 +171,10 @@ impl App {
     }
 
     pub fn previous(&mut self, search: Option<String>) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
         if let Some(ViewMode::FilteredView) = self.view_mode.back() {
@@ -202,6 +218,10 @@ impl App {
     }
 
     pub fn skipping_next(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
@@ -220,6 +240,10 @@ impl App {
     }
 
     pub fn skipping_prev(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
@@ -250,6 +274,10 @@ impl App {
     }
 
     pub fn end(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
@@ -266,6 +294,10 @@ impl App {
     }
 
     pub fn switch_to_item_view(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         match self.view_mode.back() {
             Some(ViewMode::Table) => {
                 self.view_mode.push_back(ViewMode::TableItem(
@@ -303,12 +335,20 @@ impl App {
     }
 
     pub fn next_tab(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         self.selected_tab_index = self.selected_tab_index.saturating_add(1) % self.tabs.len();
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
     pub fn prev_tab(&mut self) {
+        if self.tabs.is_empty() {
+            return;
+        }
+
         self.selected_tab_index = self.selected_tab_index.saturating_sub(1);
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));

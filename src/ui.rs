@@ -39,6 +39,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             "move [Arrow keys]",
             "select [enter]",
             "[b]ack [Esc]",
+            "close tab [x]",
             "[q]uit",
         ];
 

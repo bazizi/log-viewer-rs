@@ -359,26 +359,30 @@ impl App {
     }
 
     pub fn load_files(&mut self) {
-        let file = FileDialog::new()
+        let files = FileDialog::new()
             .add_filter("text", &["txt", "log", "bak"])
-            .pick_file()
-            .unwrap();
-        let file_path = file.to_str().unwrap().to_string();
-        let table_items = TableItems {
-            data: parser::parse_log_by_path(&file_path, 0).unwrap(),
-            selected_item_index: 0,
-        };
-        self.tabs.push(Tab {
-            items: table_items.clone(),
-            name: std::path::Path::new(file_path.clone().as_str())
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string(),
-            filtered_view_items: table_items,
-        });
-        self.selected_tab_index = self.tabs.len() - 1;
+            .pick_files();
+
+        if let Some(files) = files {
+            for file in files {
+                let file_path = file.to_str().unwrap().to_string();
+                let table_items = TableItems {
+                    data: parser::parse_log_by_path(&file_path, 0).unwrap(),
+                    selected_item_index: 0,
+                };
+                self.tabs.push(Tab {
+                    items: table_items.clone(),
+                    name: std::path::Path::new(file_path.clone().as_str())
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                    filtered_view_items: table_items,
+                });
+                self.selected_tab_index = self.tabs.len() - 1;
+            }
+        }
     }
 
     pub fn next_tab(&mut self) {

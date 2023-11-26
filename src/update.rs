@@ -130,6 +130,8 @@ fn handle_search_mode(key_code: KeyCode, app: &mut App) {
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
             KeyCode::Down => app.next(Some(current_input_copy)),
             KeyCode::Up => app.previous(Some(current_input_copy)),
+            KeyCode::Left => app.prev_tab(),
+            KeyCode::Right => app.next_tab(),
             KeyCode::PageDown => app.skipping_next(),
             KeyCode::PageUp => app.skipping_prev(),
             KeyCode::Home => app.start(),
@@ -148,7 +150,10 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
     match key_code {
         KeyCode::Char('q') => {
             app.running = false;
-            return;
+        }
+        KeyCode::Char('x') => {
+            app.tabs.remove(app.selected_tab_index);
+            app.selected_tab_index = app.selected_tab_index.saturating_sub(1);
         }
         KeyCode::Char('b') | KeyCode::Esc => {
             if app.view_mode.len() > 1 {

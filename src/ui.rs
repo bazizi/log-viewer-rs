@@ -1,5 +1,10 @@
 use crate::{app::SelectedInput, parser::LogEntryIndices, App, ViewMode};
 
+use ratatui::layout::Margin;
+use ratatui::widgets::Scrollbar;
+use ratatui::widgets::ScrollbarOrientation;
+use ratatui::widgets::ScrollbarState;
+
 use ratatui::{
     layout::{Constraint, Layout},
     prelude::Direction,
@@ -71,17 +76,20 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let text = if let Some(SelectedInput::Filter(_filter_text)) = &app.selected_input {
         if app.tabs[app.selected_tab_index]
             .filtered_view_items
+            .data
             .is_empty()
         {
             "".to_string()
         } else {
-            app.tabs[app.selected_tab_index].filtered_view_items
-                [app.tabs[app.selected_tab_index].selected_filtered_view_item_index]
-                [LogEntryIndices::LOG as usize]
+            app.tabs[app.selected_tab_index].filtered_view_items.data[app.tabs
+                [app.selected_tab_index]
+                .filtered_view_items
+                .selected_item_index][LogEntryIndices::LOG as usize]
                 .clone()
         }
     } else {
-        app.tabs[app.selected_tab_index].items[app.tabs[app.selected_tab_index].selected_item_index]
+        app.tabs[app.selected_tab_index].items.data
+            [app.tabs[app.selected_tab_index].items.selected_item_index]
             [LogEntryIndices::LOG as usize]
             .clone()
     };
@@ -132,16 +140,16 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .height(1)
         .bottom_margin(0);
 
-    let mut items = &app.tabs[app.selected_tab_index].items;
+    let mut items = &app.tabs[app.selected_tab_index].items.data;
 
     if let Some(ViewMode::FilteredView) = app.view_mode.back() {
         // we're in filtered view mode so show filtered items instead of all items
-        items = &app.tabs[app.selected_tab_index].filtered_view_items;
+        items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
     } else if let Some(ViewMode::TableItem(_)) = app.view_mode.back() {
         if app.view_mode.len() >= 2 {
             if let Some(ViewMode::FilteredView) = app.view_mode.get(app.view_mode.len() - 2) {
                 // We're viewing a filtered view item
-                items = &app.tabs[app.selected_tab_index].filtered_view_items;
+                items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
             }
         }
     }
@@ -207,7 +215,31 @@ pub fn render(f: &mut Frame, app: &mut App) {
                     Constraint::Length(6),
                     Constraint::Percentage(100),
                 ]);
+
+            let scrollbar = Scrollbar::default()
+                .orientation(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(Some("↑"))
+                .end_symbol(Some("↓"));
+
+            let mut scrollbar_state =
+                ScrollbarState::new(items.len()).position(match app.view_mode.back() {
+                    Some(ViewMode::FilteredView) => {
+                        app.tabs[app.selected_tab_index]
+                            .filtered_view_items
+                            .selected_item_index
+                    }
+                    _ => app.tabs[app.selected_tab_index].items.selected_item_index,
+                });
+
             f.render_stateful_widget(t, table_area, &mut app.state);
+            f.render_stateful_widget(
+                scrollbar,
+                table_area.inner(&Margin {
+                    vertical: 1,
+                    horizontal: 0,
+                }),
+                &mut scrollbar_state,
+            );
         }
     }
 }

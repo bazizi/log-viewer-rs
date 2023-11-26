@@ -48,25 +48,27 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
 }
 
 fn filter_by_current_input(current_input: String, app: &mut App, search_all: bool) {
-    // User is typing in filter mode so reset the cursors and update filtered items
-    app.tabs[app.selected_tab_index].selected_filtered_view_item_index = 0;
+    for tab in &mut app.tabs {
+        // User is typing in filter mode so reset the cursors and update filtered items
+        tab.filtered_view_items.selected_item_index = 0;
 
-    let items = if search_all {
-        &app.tabs[app.selected_tab_index].items
-    } else {
-        &app.tabs[app.selected_tab_index].filtered_view_items
-    };
+        let items = if search_all {
+            &tab.items.data
+        } else {
+            &tab.filtered_view_items.data
+        };
 
-    app.tabs[app.selected_tab_index].filtered_view_items = items
-        .iter()
-        .filter(|item| {
-            current_input.trim().is_empty()
-                || item[LogEntryIndices::LOG as usize]
-                    .to_lowercase()
-                    .contains(current_input.to_lowercase().as_str())
-        })
-        .map(|item| item.clone())
-        .collect::<Vec<Vec<String>>>();
+        tab.filtered_view_items.data = items
+            .iter()
+            .filter(|item| {
+                current_input.trim().is_empty()
+                    || item[LogEntryIndices::LOG as usize]
+                        .to_lowercase()
+                        .contains(current_input.to_lowercase().as_str())
+            })
+            .map(|item| item.clone())
+            .collect::<Vec<Vec<String>>>();
+    }
 }
 
 fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
@@ -86,6 +88,8 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
             KeyCode::Down => app.next(None),
             KeyCode::Up => app.previous(None),
+            KeyCode::Left => app.prev_tab(),
+            KeyCode::Right => app.next_tab(),
             KeyCode::PageDown => app.skipping_next(),
             KeyCode::PageUp => app.skipping_prev(),
             KeyCode::Home => app.start(),
@@ -97,7 +101,13 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
                 {
                     app.view_mode.pop_back();
                     app.selected_input = None;
-                    app.tabs[app.selected_tab_index].filtered_view_items.clear();
+                    app.tabs[app.selected_tab_index]
+                        .filtered_view_items
+                        .data
+                        .clear();
+                    app.tabs[app.selected_tab_index]
+                        .filtered_view_items
+                        .selected_item_index = 0;
                 }
             }
             _ => {}
@@ -162,8 +172,8 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
             }
 
             app.selected_input = Some(SelectedInput::Filter("".to_owned()));
-            app.tabs[app.selected_tab_index].filtered_view_items =
-                app.tabs[app.selected_tab_index].items.clone();
+            app.tabs[app.selected_tab_index].filtered_view_items.data =
+                app.tabs[app.selected_tab_index].items.data.clone();
             app.view_mode.push_back(ViewMode::FilteredView);
         }
         KeyCode::Char('s') => {

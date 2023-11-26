@@ -169,6 +169,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .style(Style::default().white())
             .highlight_style(Style::default().yellow())
             .divider(ratatui::symbols::bar::FULL)
+            .highlight_style(Style::default().on_cyan())
             .select(app.selected_tab_index);
 
             f.render_widget(tabs, tabs_area);

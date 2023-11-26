@@ -136,21 +136,15 @@ fn handle_search_mode(key_code: KeyCode, app: &mut App) {
 
 fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
     match key_code {
-        KeyCode::Char('q') | KeyCode::Esc => match app.view_mode.back() {
-            Some(ViewMode::Table) => {
-                app.running = false;
-                return;
-            }
-            _ => {
+        KeyCode::Char('q') => {
+            app.running = false;
+            return;
+        }
+        KeyCode::Char('b') | KeyCode::Esc => {
+            if app.view_mode.len() > 1 {
                 app.view_mode.pop_back();
-                match app.view_mode.back() {
-                    Some(ViewMode::Table) => {
-                        app.selected_input = None;
-                    }
-                    _ => {}
-                }
             }
-        },
+        }
         KeyCode::Home => app.start(),
         KeyCode::End => app.end(),
         KeyCode::Enter => app.switch_to_item_view(),

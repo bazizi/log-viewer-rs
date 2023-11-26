@@ -30,16 +30,14 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(file_path: Option<&String>) -> App {
-        let mut view_mode = VecDeque::new();
-        view_mode.push_back(ViewMode::Table);
-
-        if let Some(file_path) = file_path {
-            App {
-                running: true,
-                state: TableState::default(),
-                view_mode: view_mode,
-                tabs: vec![Tab {
+    pub fn new(file_paths: Vec<String>) -> App {
+        App {
+            running: true,
+            state: TableState::default(),
+            view_mode: vec![ViewMode::Table].into(),
+            tabs: file_paths
+                .iter()
+                .map(|file_path| Tab {
                     name: std::path::Path::new(file_path.clone().as_str())
                         .file_name()
                         .unwrap()
@@ -50,24 +48,12 @@ impl App {
                     selected_item_index: 0,
                     filtered_view_items: vec![],
                     selected_filtered_view_item_index: 0,
-                }],
-                selected_tab_index: 0,
-                selected_input: None,
-                view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
-                tail_enabled: false,
-            }
-        } else {
-            App {
-                running: true,
-                // TODO: Add a help page on startup
-                state: TableState::default(),
-                view_mode: view_mode,
-                tabs: vec![],
-                selected_tab_index: 0,
-                selected_input: None,
-                view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
-                tail_enabled: false,
-            }
+                })
+                .collect::<Vec<Tab>>(),
+            selected_tab_index: 0,
+            selected_input: None,
+            view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
+            tail_enabled: false,
         }
     }
 
@@ -339,7 +325,10 @@ impl App {
             return;
         }
 
-        self.selected_tab_index = self.selected_tab_index.saturating_add(1) % self.tabs.len();
+        self.selected_tab_index = std::cmp::min(
+            self.selected_tab_index.saturating_add(1),
+            self.tabs.len() - 1,
+        );
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
     }

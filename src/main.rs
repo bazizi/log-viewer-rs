@@ -71,11 +71,12 @@ fn run() -> Result<()> {
     )?;
 
     // create app and run it
-    let mut app = App::new(if args.len() == 2 {
-        Some(&args[1])
-    } else {
-        None
-    });
+    let mut app = App::new(
+        args.iter()
+            .skip(1)
+            .map(|item| item.clone())
+            .collect::<Vec<String>>(),
+    );
 
     while app.running {
         terminal.draw(|f| render(f, &mut app))?;

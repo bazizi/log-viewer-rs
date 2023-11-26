@@ -1,9 +1,9 @@
-- Scrollbar
-- Open/browse
-- [F]ilter mode
-- [S]earch mode
+- App icon
+- Allow searching in filter mode
+- [C]opy to clipboard
 - Filter sessions (dropdown)
 - [T]ail mode
-- Custom line parser
 - Smart JSON
-- [G]oto line
+- [H]ighlight selected line
+- Bold searched keywords
+

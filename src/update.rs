@@ -152,8 +152,15 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
             app.running = false;
         }
         KeyCode::Char('x') => {
+            if app.tabs.is_empty() {
+                return;
+            }
+
+            if app.selected_tab_index == app.tabs.len() - 1 {
+                app.selected_tab_index = app.selected_tab_index.saturating_sub(1);
+            }
+
             app.tabs.remove(app.selected_tab_index);
-            app.selected_tab_index = app.selected_tab_index.saturating_sub(1);
         }
         KeyCode::Char('b') | KeyCode::Esc => {
             if app.view_mode.len() > 1 {

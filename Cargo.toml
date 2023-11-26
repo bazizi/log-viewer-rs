@@ -16,3 +16,5 @@ ratatui = "0.24.0"
 regex = "1.10.2"
 rfd = "0.12.1"
 
+[build-dependencies]
+winres = "0.1"

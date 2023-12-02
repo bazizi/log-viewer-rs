@@ -4,9 +4,14 @@ use std::ops::Range;
 use ratatui::widgets::TableState;
 use rfd::FileDialog;
 
+use anyhow::Result;
+
 use crate::parser;
-use crate::parser::{LogEntry, LogEntryIndices};
+use crate::parser::LogEntryIndices;
 use log::info;
+
+use crate::tab::Tab;
+use crate::tab::TableItems;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
 const DEFAULT_SKIP_SIZE: usize = 5;
@@ -20,18 +25,6 @@ pub enum ViewMode {
     FilteredView,
     SearchView,
     TableItem(usize /* index */),
-}
-
-#[derive(Clone)]
-pub struct TableItems {
-    pub data: Vec<LogEntry>,
-    pub selected_item_index: usize,
-}
-
-pub struct Tab {
-    pub name: String,
-    pub items: TableItems,
-    pub filtered_view_items: TableItems,
 }
 
 pub struct App {
@@ -57,7 +50,7 @@ impl App {
                 .iter()
                 .map(|file_path| {
                     let table_items = TableItems {
-                        data: parser::parse_log_by_path(&file_path, 0).unwrap(),
+                        data: parser::parse_log_by_path(&file_path).unwrap(),
                         selected_item_index: 0,
                     };
                     Tab {
@@ -69,6 +62,12 @@ impl App {
                             .to_string(),
                         items: table_items.clone(),
                         filtered_view_items: table_items,
+                        last_file_size: if let Ok(meta) = std::fs::metadata(file_path) {
+                            meta.len().try_into().unwrap_or(0)
+                        } else {
+                            0
+                        },
+                        file_path: file_path.to_string(),
                     }
                 })
                 .collect::<Vec<Tab>>(),
@@ -367,7 +366,7 @@ impl App {
             for file in files {
                 let file_path = file.to_str().unwrap().to_string();
                 let table_items = TableItems {
-                    data: parser::parse_log_by_path(&file_path, 0).unwrap(),
+                    data: parser::parse_log_by_path(&file_path).unwrap(),
                     selected_item_index: 0,
                 };
                 self.tabs.push(Tab {
@@ -379,6 +378,12 @@ impl App {
                         .unwrap()
                         .to_string(),
                     filtered_view_items: table_items,
+                    file_path: file_path.to_string(),
+                    last_file_size: if let Ok(meta) = std::fs::metadata(file_path) {
+                        meta.len().try_into().unwrap_or(0)
+                    } else {
+                        0
+                    },
                 });
                 self.selected_tab_index = self.tabs.len() - 1;
             }
@@ -406,5 +411,22 @@ impl App {
         self.selected_tab_index = self.selected_tab_index.saturating_sub(1);
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
+    }
+
+    pub fn update_stale_tabs(&mut self) -> Result<()> {
+        if !self.tail_enabled {
+            return Ok(());
+        }
+
+        for tab in &mut self.tabs {
+            let metadata = std::fs::metadata(&tab.file_path)?;
+            let current_file_size = metadata.len().try_into().unwrap_or(0);
+            if tab.last_file_size != current_file_size {
+                tab.reload()?;
+                tab.last_file_size = current_file_size;
+            }
+        }
+
+        Ok(())
     }
 }

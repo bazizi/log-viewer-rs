@@ -32,7 +32,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
         let menu_area = areas[0];
         let menu = [
             "[o]pen",
-            "[t]ail",
+            &("[t]ail ".to_owned()
+                + if app.tail_enabled {
+                    "(enabled)"
+                } else {
+                    "(disabled)"
+                }),
             "[s]earch",
             "[f]ilter",
             "[c]opy",
@@ -43,9 +48,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
             "[q]uit",
         ];
 
-        let mut menu_item_constraints = menu
+        let menu_item_constraints = menu
             .iter()
-            .map(|item| Constraint::Percentage(100 / menu.len() as u16))
+            .map(|_| Constraint::Percentage(100 / menu.len() as u16))
             .collect::<Vec<Constraint>>();
 
         let menu_item_area = Layout::default()

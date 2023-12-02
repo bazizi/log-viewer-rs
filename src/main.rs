@@ -30,6 +30,8 @@ use crate::update::update;
 mod event;
 use crate::event::EventHandler;
 
+mod tab;
+
 fn main() -> Result<()> {
     startup()?;
     let status = run();

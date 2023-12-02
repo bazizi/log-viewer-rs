@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::io::Read;
-use std::io::Seek;
 
 use log::{error, info};
 
@@ -15,7 +14,7 @@ pub enum LogEntryIndices {
     LOG,
 }
 
-pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEntry>> {
+pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
     info!("Attempting to parse log file [{}]...", log_path);
     let re = regex::Regex::new(
         r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
@@ -26,7 +25,6 @@ pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEnt
     let mut contents = String::new();
     let lines = {
         let mut f = std::fs::File::open(log_path)?;
-        f.seek(std::io::SeekFrom::Start(start_offset))?;
         f.read_to_string(&mut contents)?;
         contents.lines().collect::<Vec<&str>>()
     };
@@ -55,9 +53,9 @@ pub fn parse_log_by_path(log_path: &str, start_offset: u64) -> Result<Vec<LogEnt
             _session += 1;
         }
 
-        let id = line_num;
+        let _id = line_num;
         let date = &cap["date"];
-        let pid = &cap["pid"];
+        let _pid = &cap["pid"];
         let tid = &cap["tid"];
         let level = &cap["level"];
         log += &cap["log"];

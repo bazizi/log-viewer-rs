@@ -8,6 +8,8 @@ use anyhow::Result;
 use log::info;
 
 pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
+    app.update_stale_tabs()?;
+
     match events.next()? {
         Event::Tick => {}
         Event::Key(key) => {
@@ -195,6 +197,9 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
 
             app.selected_input = Some(SelectedInput::Search("".to_owned()));
             app.view_mode.push_back(ViewMode::SearchView);
+        }
+        KeyCode::Char('t') => {
+            app.tail_enabled = !app.tail_enabled;
         }
         _ => {}
     }

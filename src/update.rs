@@ -50,11 +50,11 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
         match key_code {
             KeyCode::Char(c) => {
                 app.filter_input_text.push(c);
-                app.filter_by_current_input(app.filter_input_text.clone(), false);
+                app.filter_by_current_input(app.filter_input_text.clone());
             }
             KeyCode::Backspace => {
                 app.filter_input_text.pop();
-                app.filter_by_current_input(app.filter_input_text.clone(), true);
+                app.filter_by_current_input(app.filter_input_text.clone());
             }
             KeyCode::Enter => app.switch_to_item_view(),
 
@@ -77,7 +77,7 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
                 }
             }
             _ => {
-                app.filter_by_current_input(app.filter_input_text.clone(), true);
+                app.filter_by_current_input(app.filter_input_text.clone());
             }
         }
     }

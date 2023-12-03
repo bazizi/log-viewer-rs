@@ -144,6 +144,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     match app.view_mode.back() {
         Some(ViewMode::TableItem(item)) => {
+            app.selected_input = None;
             let t = ratatui::widgets::Paragraph::new(&*items[*item][LogEntryIndices::LOG as usize])
                 .block(
                     Block::default()

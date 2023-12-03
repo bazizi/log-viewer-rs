@@ -347,7 +347,7 @@ impl App {
             return Ok(());
         }
 
-        self.filter_by_current_input(self.filter_input_text.clone(), true);
+        self.filter_by_current_input(self.filter_input_text.clone());
 
         for tab in &mut self.tabs {
             let metadata = std::fs::metadata(&tab.file_path)?;
@@ -366,21 +366,36 @@ impl App {
         Ok(())
     }
 
-    pub fn filter_by_current_input(&mut self, current_input: String, search_all: bool) {
+    pub fn filter_by_current_input(&mut self, filter: String) {
         for tab in &mut self.tabs {
-            if search_all {
-                tab.reset_filtered_view_items();
-            }
+            tab.reset_filtered_view_items();
 
             tab.filtered_view_items.data = tab
                 .filtered_view_items
                 .data
                 .iter()
                 .filter(|item| {
-                    current_input.trim().is_empty()
-                        || item[LogEntryIndices::LOG as usize]
-                            .to_lowercase()
-                            .contains(current_input.to_lowercase().as_str())
+                    if filter.trim().is_empty() {
+                        return true;
+                    }
+                    let keywords = filter
+                        .split(',')
+                        .map(|keyword| keyword.to_owned())
+                        .collect::<Vec<String>>();
+
+                    let mut include_item = false;
+                    for filter_keyword in &keywords {
+                        include_item = include_item
+                            || item[LogEntryIndices::LOG as usize]
+                                .to_lowercase()
+                                .contains(filter_keyword.to_lowercase().as_str());
+
+                        if include_item {
+                            break;
+                        }
+                    }
+
+                    include_item
                 })
                 .map(|item| item.clone())
                 .collect::<Vec<Vec<String>>>();

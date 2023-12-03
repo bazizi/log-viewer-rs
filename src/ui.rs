@@ -79,7 +79,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
 
-    let text = if let Some(SelectedInput::Filter(_filter_text)) = &app.selected_input {
+    let text = if !app.filter_input_text.is_empty() {
         if app.tabs[app.selected_tab_index]
             .filtered_view_items
             .data
@@ -114,27 +114,23 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     let (filter_area, search_area) = (input_area[0], input_area[1]);
 
-    let mut filter_text = None;
-    let mut search_text = None;
-    if let Some(SelectedInput::Filter(_filter_text)) = &app.selected_input {
-        filter_text = Some(_filter_text.clone());
+    if let Some(SelectedInput::Filter) = &app.selected_input {
         f.set_cursor(
-            filter_area.x + (_filter_text.len() as u16) + 1,
+            filter_area.x + (app.filter_input_text.len() as u16) + 1,
             filter_area.y + 1,
         );
-    } else if let Some(SelectedInput::Search(_search_text)) = &app.selected_input {
-        search_text = Some(_search_text.clone());
+    } else if let Some(SelectedInput::Search) = &app.selected_input {
         f.set_cursor(
-            search_area.x + (_search_text.len() as u16) + 1,
+            search_area.x + (app.search_input_text.len() as u16) + 1,
             search_area.y + 1,
         );
     }
 
-    let filter = Paragraph::new(filter_text.clone().unwrap_or("".to_owned()))
+    let filter = Paragraph::new(app.filter_input_text.clone())
         .block(Block::default().borders(Borders::ALL).title("[F]ilter"));
     f.render_widget(filter, filter_area);
 
-    let search = Paragraph::new(search_text.unwrap_or("".to_owned()))
+    let search = Paragraph::new(app.search_input_text.clone())
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
@@ -148,16 +144,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     let mut items = &app.tabs[app.selected_tab_index].items.data;
 
-    if let Some(ViewMode::FilteredView) = app.view_mode.back() {
+    if !app.filter_input_text.is_empty() {
         // we're in filtered view mode so show filtered items instead of all items
         items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
-    } else if let Some(ViewMode::TableItem(_)) = app.view_mode.back() {
-        if app.view_mode.len() >= 2 {
-            if let Some(ViewMode::FilteredView) = app.view_mode.get(app.view_mode.len() - 2) {
-                // We're viewing a filtered view item
-                items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
-            }
-        }
     }
 
     match app.view_mode.back() {
@@ -228,13 +217,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .end_symbol(Some("↓"));
 
             let mut scrollbar_state =
-                ScrollbarState::new(items.len()).position(match app.view_mode.back() {
-                    Some(ViewMode::FilteredView) => {
-                        app.tabs[app.selected_tab_index]
-                            .filtered_view_items
-                            .selected_item_index
-                    }
-                    _ => app.tabs[app.selected_tab_index].items.selected_item_index,
+                ScrollbarState::new(items.len()).position(if !app.filter_input_text.is_empty() {
+                    app.tabs[app.selected_tab_index]
+                        .filtered_view_items
+                        .selected_item_index
+                } else {
+                    app.tabs[app.selected_tab_index].items.selected_item_index
                 });
 
             f.render_stateful_widget(t, table_area, &mut app.state);

@@ -34,15 +34,11 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
         return;
     }
 
-    if let Some(ViewMode::FilteredView) = app.view_mode.back() {
-        if app.selected_input.is_some() {
-            handle_filtered_mode(key.code, app);
-        }
+    if let Some(SelectedInput::Filter) = app.selected_input {
+        handle_filtered_mode(key.code, app);
         return;
     } else if let Some(ViewMode::SearchView) = app.view_mode.back() {
-        if app.selected_input.is_some() {
-            handle_search_mode(key.code, app);
-        }
+        handle_search_mode(key.code, app);
         return;
     }
 
@@ -74,15 +70,15 @@ fn filter_by_current_input(current_input: String, app: &mut App, search_all: boo
 }
 
 fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
-    if let Some(SelectedInput::Filter(current_input)) = &mut app.selected_input {
+    if let Some(SelectedInput::Filter) = &mut app.selected_input {
         match key_code {
             KeyCode::Char(c) => {
-                current_input.push(c);
-                filter_by_current_input(current_input.clone(), app, false);
+                app.filter_input_text.push(c);
+                filter_by_current_input(app.filter_input_text.clone(), app, false);
             }
             KeyCode::Backspace => {
-                current_input.pop();
-                filter_by_current_input(current_input.clone(), app, true);
+                app.filter_input_text.pop();
+                filter_by_current_input(app.filter_input_text.clone(), app, true);
             }
             KeyCode::Enter => app.switch_to_item_view(),
 
@@ -98,40 +94,32 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
             KeyCode::End => app.end(),
 
             KeyCode::Esc => {
-                if let Some(ViewMode::TableItem(_)) | Some(ViewMode::FilteredView) =
-                    app.view_mode.back()
-                {
+                if let Some(ViewMode::TableItem(_)) = app.view_mode.back() {
                     app.view_mode.pop_back();
+                } else {
                     app.selected_input = None;
-                    app.tabs[app.selected_tab_index]
-                        .filtered_view_items
-                        .data
-                        .clear();
-                    app.tabs[app.selected_tab_index]
-                        .filtered_view_items
-                        .selected_item_index = 0;
                 }
             }
-            _ => {}
+            _ => {
+                filter_by_current_input(app.filter_input_text.clone(), app, true);
+            }
         }
     }
 }
 
 fn handle_search_mode(key_code: KeyCode, app: &mut App) {
-    if let Some(SelectedInput::Search(current_input)) = &mut app.selected_input {
-        let current_input_copy = current_input.clone();
-
+    if let Some(SelectedInput::Search) = &mut app.selected_input {
         match key_code {
             KeyCode::Char(c) => {
-                current_input.push(c);
+                app.search_input_text.push(c);
             }
             KeyCode::Backspace => {
-                current_input.pop();
+                app.search_input_text.pop();
             }
             // Arrow keys to select filtered items
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
-            KeyCode::Down => app.next(Some(current_input_copy)),
-            KeyCode::Up => app.previous(Some(current_input_copy)),
+            KeyCode::Down => app.next(Some(app.search_input_text.clone())),
+            KeyCode::Up => app.previous(Some(app.search_input_text.clone())),
             KeyCode::Left => app.prev_tab(),
             KeyCode::Right => app.next_tab(),
             KeyCode::PageDown => app.skipping_next(),
@@ -185,17 +173,17 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
                 return;
             }
 
-            app.selected_input = Some(SelectedInput::Filter("".to_owned()));
+            app.selected_input = Some(SelectedInput::Filter);
             app.tabs[app.selected_tab_index].filtered_view_items.data =
                 app.tabs[app.selected_tab_index].items.data.clone();
-            app.view_mode.push_back(ViewMode::FilteredView);
+            handle_filtered_mode(KeyCode::Null, app);
         }
         KeyCode::Char('s') => {
             if app.tabs.is_empty() {
                 return;
             }
 
-            app.selected_input = Some(SelectedInput::Search("".to_owned()));
+            app.selected_input = Some(SelectedInput::Search);
             app.view_mode.push_back(ViewMode::SearchView);
         }
         KeyCode::Char('t') => {

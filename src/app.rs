@@ -17,12 +17,11 @@ const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
 const DEFAULT_SKIP_SIZE: usize = 5;
 
 pub enum SelectedInput {
-    Filter(String),
-    Search(String),
+    Filter,
+    Search,
 }
 pub enum ViewMode {
     Table,
-    FilteredView,
     SearchView,
     TableItem(usize /* index */),
 }
@@ -36,6 +35,8 @@ pub struct App {
     pub selected_tab_index: usize,
     pub view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
     pub selected_input: Option<SelectedInput>,
+    pub filter_input_text: String,
+    pub search_input_text: String,
     pub view_buffer_size: usize,
     pub tail_enabled: bool, // TODO: add tailing support
 }
@@ -73,6 +74,8 @@ impl App {
                 .collect::<Vec<Tab>>(),
             selected_tab_index: 0,
             selected_input: None,
+            filter_input_text: "".to_string(),
+            search_input_text: "".to_string(),
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
         }
@@ -88,7 +91,7 @@ impl App {
         let mut num_items = self.tabs[self.selected_tab_index].items.data.len();
         let mut items = &self.tabs[self.selected_tab_index].items;
 
-        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+        if !self.filter_input_text.is_empty() {
             items = &self.tabs[self.selected_tab_index].filtered_view_items;
             num_items = self.tabs[self.selected_tab_index]
                 .filtered_view_items
@@ -121,7 +124,7 @@ impl App {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
-        let pos = if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+        let pos = if !self.filter_input_text.is_empty() {
             self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index
@@ -141,56 +144,46 @@ impl App {
             return;
         }
 
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
-            let num_items = self.tabs[self.selected_tab_index]
-                .filtered_view_items
-                .data
-                .len()
-                - 1;
-            let index = &mut self.tabs[self.selected_tab_index]
-                .filtered_view_items
-                .selected_item_index;
-            *index = std::cmp::min(index.saturating_add(1), num_items);
+        let (mut index, items) = if !self.filter_input_text.is_empty() {
+            (
+                self.tabs[self.selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index,
+                &mut self.tabs[self.selected_tab_index].filtered_view_items,
+            )
         } else {
-            let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
-                // normal mode
-                let index = self.tabs[self.selected_tab_index].items.selected_item_index;
-                std::cmp::min(
-                    index.saturating_add(1),
-                    self.tabs[self.selected_tab_index].items.data.len() - 1,
-                )
-            } else {
-                // search mode
-                let mut index = self.tabs[self.selected_tab_index].items.selected_item_index;
-                let mut final_index = index;
-                loop {
-                    index = std::cmp::min(
-                        index.saturating_add(1),
-                        self.tabs[self.selected_tab_index].items.data.len() - 1,
-                    );
+            (
+                self.tabs[self.selected_tab_index].items.selected_item_index,
+                &mut self.tabs[self.selected_tab_index].items,
+            )
+        };
 
-                    if self.tabs[self.selected_tab_index].items.data[index]
-                        [LogEntryIndices::LOG as usize]
-                        .to_lowercase()
-                        .contains(&search.as_ref().unwrap().to_lowercase())
-                    {
-                        final_index = index;
-                        break;
-                    }
+        let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
+            std::cmp::min(index.saturating_add(1), items.data.len() - 1)
+        } else {
+            // search mode
+            let mut final_index = index;
+            loop {
+                index = std::cmp::min(index.saturating_add(1), items.data.len() - 1);
 
-                    if index == (self.tabs[self.selected_tab_index].items.data.len() - 1) {
-                        // reached the end
-                        break;
-                    }
+                if items.data[index][LogEntryIndices::LOG as usize]
+                    .to_lowercase()
+                    .contains(&search.as_ref().unwrap().to_lowercase())
+                {
+                    final_index = index;
+                    break;
                 }
 
-                final_index
-            };
+                if index == items.data.len() - 1 {
+                    // reached the beginning
+                    break;
+                }
+            }
 
-            self.tabs[self.selected_tab_index].items.selected_item_index = new_index;
-        }
+            final_index
+        };
+
+        items.selected_item_index = new_index;
 
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
@@ -201,45 +194,46 @@ impl App {
             return;
         }
 
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
-            let index = &mut self.tabs[self.selected_tab_index]
-                .filtered_view_items
-                .selected_item_index;
-            *index = std::cmp::max(index.saturating_sub(1), 0);
+        let (mut index, items) = if !self.filter_input_text.is_empty() {
+            (
+                self.tabs[self.selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index,
+                &mut self.tabs[self.selected_tab_index].filtered_view_items,
+            )
         } else {
-            let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
-                // normal mode
-                let index = self.tabs[self.selected_tab_index].items.selected_item_index;
-                std::cmp::max(index.saturating_sub(1), 0)
-            } else {
-                // search mode
-                let mut index = self.tabs[self.selected_tab_index].items.selected_item_index;
-                let mut final_index = index;
-                loop {
-                    index = std::cmp::max(index.saturating_sub(1), 0);
+            (
+                self.tabs[self.selected_tab_index].items.selected_item_index,
+                &mut self.tabs[self.selected_tab_index].items,
+            )
+        };
 
-                    if self.tabs[self.selected_tab_index].items.data[index]
-                        [LogEntryIndices::LOG as usize]
-                        .to_lowercase()
-                        .contains(&search.as_ref().unwrap().to_lowercase())
-                    {
-                        final_index = index;
-                        break;
-                    }
+        let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
+            std::cmp::max(index.saturating_sub(1), 0)
+        } else {
+            // search mode
+            let mut final_index = index;
+            loop {
+                index = std::cmp::max(index.saturating_sub(1), 0);
 
-                    if index == 0 {
-                        // reached the beginning
-                        break;
-                    }
+                if items.data[index][LogEntryIndices::LOG as usize]
+                    .to_lowercase()
+                    .contains(&search.as_ref().unwrap().to_lowercase())
+                {
+                    final_index = index;
+                    break;
                 }
 
-                final_index
-            };
+                if index == 0 {
+                    // reached the beginning
+                    break;
+                }
+            }
 
-            self.tabs[self.selected_tab_index].items.selected_item_index = new_index;
-        }
+            final_index
+        };
+
+        items.selected_item_index = new_index;
 
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
@@ -253,7 +247,7 @@ impl App {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
-        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+        if !self.filter_input_text.is_empty() {
             let num_items = self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .data
@@ -280,7 +274,7 @@ impl App {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
-        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+        if !self.filter_input_text.is_empty() {
             let index = &mut self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index;
@@ -298,7 +292,7 @@ impl App {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
-        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+        if !self.filter_input_text.is_empty() {
             self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index = 0
@@ -318,7 +312,7 @@ impl App {
         // If we're in filtered view, we should use the filtered view index
         // If not, we use the normal tab index
 
-        if let Some(ViewMode::FilteredView) = self.view_mode.back() {
+        if !self.filter_input_text.is_empty() {
             self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index = self.tabs[self.selected_tab_index]
@@ -340,17 +334,19 @@ impl App {
             return;
         }
 
+        if !self.filter_input_text.is_empty() {
+            self.view_mode.push_back(ViewMode::TableItem(
+                self.tabs[self.selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index,
+            ));
+            return;
+        }
+
         match self.view_mode.back() {
             Some(ViewMode::Table) => {
                 self.view_mode.push_back(ViewMode::TableItem(
                     self.tabs[self.selected_tab_index].items.selected_item_index,
-                ));
-            }
-            Some(ViewMode::FilteredView) => {
-                self.view_mode.push_back(ViewMode::TableItem(
-                    self.tabs[self.selected_tab_index]
-                        .filtered_view_items
-                        .selected_item_index,
                 ));
             }
             _ => {}

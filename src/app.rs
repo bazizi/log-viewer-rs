@@ -126,16 +126,25 @@ impl App {
             std::cmp::min(index.saturating_add(1), items.data.len() - 1)
         } else {
             // search mode
+            let keywords = search
+                .as_ref()
+                .unwrap()
+                .split(',')
+                .map(|keyword| keyword.to_owned())
+                .collect::<Vec<String>>();
+
             let mut final_index = index;
-            loop {
+            'outer: loop {
                 index = std::cmp::min(index.saturating_add(1), items.data.len() - 1);
 
-                if items.data[index][LogEntryIndices::LOG as usize]
-                    .to_lowercase()
-                    .contains(&search.as_ref().unwrap().to_lowercase())
-                {
-                    final_index = index;
-                    break;
+                for search_keyword in &keywords {
+                    if items.data[index][LogEntryIndices::LOG as usize]
+                        .to_lowercase()
+                        .contains(&search_keyword.to_lowercase())
+                    {
+                        final_index = index;
+                        break 'outer;
+                    }
                 }
 
                 if index == items.data.len() - 1 {
@@ -168,17 +177,25 @@ impl App {
         let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
             std::cmp::max(index.saturating_sub(1), 0)
         } else {
+            let keywords = search
+                .as_ref()
+                .unwrap()
+                .split(',')
+                .map(|keyword| keyword.to_owned())
+                .collect::<Vec<String>>();
             // search mode
             let mut final_index = index;
-            loop {
+            'outer: loop {
                 index = std::cmp::max(index.saturating_sub(1), 0);
 
-                if items.data[index][LogEntryIndices::LOG as usize]
-                    .to_lowercase()
-                    .contains(&search.as_ref().unwrap().to_lowercase())
-                {
-                    final_index = index;
-                    break;
+                for search_keyword in &keywords {
+                    if items.data[index][LogEntryIndices::LOG as usize]
+                        .to_lowercase()
+                        .contains(&search_keyword.to_lowercase())
+                    {
+                        final_index = index;
+                        break 'outer;
+                    }
                 }
 
                 if index == 0 {

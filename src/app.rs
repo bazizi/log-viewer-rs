@@ -54,22 +54,7 @@ impl App {
                         data: parser::parse_log_by_path(&file_path).unwrap(),
                         selected_item_index: 0,
                     };
-                    Tab {
-                        name: std::path::Path::new(file_path.clone().as_str())
-                            .file_name()
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .to_string(),
-                        items: table_items.clone(),
-                        filtered_view_items: table_items,
-                        last_file_size: if let Ok(meta) = std::fs::metadata(file_path) {
-                            meta.len().try_into().unwrap_or(0)
-                        } else {
-                            0
-                        },
-                        file_path: file_path.to_string(),
-                    }
+                    Tab::new(file_path.to_owned(), table_items)
                 })
                 .collect::<Vec<Tab>>(),
             selected_tab_index: 0,
@@ -82,21 +67,14 @@ impl App {
     }
 
     pub fn get_view_buffer_range(&self) -> Range<usize> {
-        if self.tabs.is_empty() {
+        let items = &self.tabs[self.selected_tab_index].filtered_view_items;
+        let num_items = self.tabs[self.selected_tab_index]
+            .filtered_view_items
+            .data
+            .len();
+
+        if self.tabs.is_empty() || items.data.is_empty() {
             return 0..0;
-        }
-
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-        let mut num_items = self.tabs[self.selected_tab_index].items.data.len();
-        let mut items = &self.tabs[self.selected_tab_index].items;
-
-        if !self.filter_input_text.is_empty() {
-            items = &self.tabs[self.selected_tab_index].filtered_view_items;
-            num_items = self.tabs[self.selected_tab_index]
-                .filtered_view_items
-                .data
-                .len();
         }
 
         // gets the view range based on the view_buffer_size
@@ -120,17 +98,10 @@ impl App {
             return 0;
         }
 
-        // Location on screen is relative to the start of the view buffer
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-
-        let pos = if !self.filter_input_text.is_empty() {
+        let pos = {
             self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index
-                - self.get_view_buffer_range().start
-        } else {
-            self.tabs[self.selected_tab_index].items.selected_item_index
                 - self.get_view_buffer_range().start
         };
 
@@ -144,19 +115,12 @@ impl App {
             return;
         }
 
-        let (mut index, items) = if !self.filter_input_text.is_empty() {
-            (
-                self.tabs[self.selected_tab_index]
-                    .filtered_view_items
-                    .selected_item_index,
-                &mut self.tabs[self.selected_tab_index].filtered_view_items,
-            )
-        } else {
-            (
-                self.tabs[self.selected_tab_index].items.selected_item_index,
-                &mut self.tabs[self.selected_tab_index].items,
-            )
-        };
+        let (mut index, items) = (
+            self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .selected_item_index,
+            &mut self.tabs[self.selected_tab_index].filtered_view_items,
+        );
 
         let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
             std::cmp::min(index.saturating_add(1), items.data.len() - 1)
@@ -194,19 +158,12 @@ impl App {
             return;
         }
 
-        let (mut index, items) = if !self.filter_input_text.is_empty() {
-            (
-                self.tabs[self.selected_tab_index]
-                    .filtered_view_items
-                    .selected_item_index,
-                &mut self.tabs[self.selected_tab_index].filtered_view_items,
-            )
-        } else {
-            (
-                self.tabs[self.selected_tab_index].items.selected_item_index,
-                &mut self.tabs[self.selected_tab_index].items,
-            )
-        };
+        let (mut index, items) = (
+            self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .selected_item_index,
+            &mut self.tabs[self.selected_tab_index].filtered_view_items,
+        );
 
         let new_index = if search.is_none() || search.as_ref().unwrap().is_empty() {
             std::cmp::max(index.saturating_sub(1), 0)
@@ -244,10 +201,7 @@ impl App {
             return;
         }
 
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-
-        if !self.filter_input_text.is_empty() {
+        {
             let num_items = self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .data
@@ -255,10 +209,6 @@ impl App {
             let index = &mut self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index;
-            *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
-        } else {
-            let num_items = self.tabs[self.selected_tab_index].items.data.len();
-            let index = &mut self.tabs[self.selected_tab_index].items.selected_item_index;
             *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
         }
 
@@ -271,16 +221,10 @@ impl App {
             return;
         }
 
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-
-        if !self.filter_input_text.is_empty() {
+        {
             let index = &mut self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index;
-            *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
-        } else {
-            let index = &mut self.tabs[self.selected_tab_index].items.selected_item_index;
             *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
         }
 
@@ -289,16 +233,9 @@ impl App {
     }
 
     pub fn start(&mut self) {
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-
-        if !self.filter_input_text.is_empty() {
-            self.tabs[self.selected_tab_index]
-                .filtered_view_items
-                .selected_item_index = 0
-        } else {
-            self.tabs[self.selected_tab_index].items.selected_item_index = 0
-        }
+        self.tabs[self.selected_tab_index]
+            .filtered_view_items
+            .selected_item_index = 0;
 
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
@@ -309,21 +246,13 @@ impl App {
             return;
         }
 
-        // If we're in filtered view, we should use the filtered view index
-        // If not, we use the normal tab index
-
-        if !self.filter_input_text.is_empty() {
-            self.tabs[self.selected_tab_index]
-                .filtered_view_items
-                .selected_item_index = self.tabs[self.selected_tab_index]
-                .filtered_view_items
-                .data
-                .len()
-                - 1;
-        } else {
-            self.tabs[self.selected_tab_index].items.selected_item_index =
-                self.tabs[self.selected_tab_index].items.data.len() - 1;
-        }
+        self.tabs[self.selected_tab_index]
+            .filtered_view_items
+            .selected_item_index = self.tabs[self.selected_tab_index]
+            .filtered_view_items
+            .data
+            .len()
+            - 1;
 
         self.state
             .select(Some(self.calculate_position_in_view_buffer()));
@@ -346,7 +275,9 @@ impl App {
         match self.view_mode.back() {
             Some(ViewMode::Table) => {
                 self.view_mode.push_back(ViewMode::TableItem(
-                    self.tabs[self.selected_tab_index].items.selected_item_index,
+                    self.tabs[self.selected_tab_index]
+                        .filtered_view_items
+                        .selected_item_index,
                 ));
             }
             _ => {}
@@ -365,22 +296,7 @@ impl App {
                     data: parser::parse_log_by_path(&file_path).unwrap(),
                     selected_item_index: 0,
                 };
-                self.tabs.push(Tab {
-                    items: table_items.clone(),
-                    name: std::path::Path::new(file_path.clone().as_str())
-                        .file_name()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .to_string(),
-                    filtered_view_items: table_items,
-                    file_path: file_path.to_string(),
-                    last_file_size: if let Ok(meta) = std::fs::metadata(file_path) {
-                        meta.len().try_into().unwrap_or(0)
-                    } else {
-                        0
-                    },
-                });
+                self.tabs.push(Tab::new(file_path, table_items));
                 self.selected_tab_index = self.tabs.len() - 1;
             }
         }
@@ -414,15 +330,49 @@ impl App {
             return Ok(());
         }
 
+        self.filter_by_current_input(self.filter_input_text.clone(), true);
+
         for tab in &mut self.tabs {
             let metadata = std::fs::metadata(&tab.file_path)?;
             let current_file_size = metadata.len().try_into().unwrap_or(0);
             if tab.last_file_size != current_file_size {
                 tab.reload()?;
                 tab.last_file_size = current_file_size;
+                tab.filtered_view_items.selected_item_index =
+                    tab.filtered_view_items.data.len() - 1;
             }
         }
 
+        self.state
+            .select(Some(self.calculate_position_in_view_buffer()));
+
         Ok(())
+    }
+
+    pub fn filter_by_current_input(&mut self, current_input: String, search_all: bool) {
+        for tab in &mut self.tabs {
+            if search_all {
+                tab.reset_filtered_view_items();
+            }
+
+            tab.filtered_view_items.data = tab
+                .filtered_view_items
+                .data
+                .iter()
+                .filter(|item| {
+                    current_input.trim().is_empty()
+                        || item[LogEntryIndices::LOG as usize]
+                            .to_lowercase()
+                            .contains(current_input.to_lowercase().as_str())
+                })
+                .map(|item| item.clone())
+                .collect::<Vec<Vec<String>>>();
+
+            tab.filtered_view_items.selected_item_index = if self.tail_enabled {
+                tab.filtered_view_items.data.len() - 1
+            } else {
+                0
+            };
+        }
     }
 }

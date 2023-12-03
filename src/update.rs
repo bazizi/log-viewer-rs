@@ -1,4 +1,4 @@
-use crate::{app::SelectedInput, event::EventHandler, parser::LogEntryIndices, App, ViewMode};
+use crate::{app::SelectedInput, event::EventHandler, App, ViewMode};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -45,40 +45,16 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
     handle_normal_mode(key.code, app);
 }
 
-fn filter_by_current_input(current_input: String, app: &mut App, search_all: bool) {
-    for tab in &mut app.tabs {
-        // User is typing in filter mode so reset the cursors and update filtered items
-        tab.filtered_view_items.selected_item_index = 0;
-
-        let items = if search_all {
-            &tab.items.data
-        } else {
-            &tab.filtered_view_items.data
-        };
-
-        tab.filtered_view_items.data = items
-            .iter()
-            .filter(|item| {
-                current_input.trim().is_empty()
-                    || item[LogEntryIndices::LOG as usize]
-                        .to_lowercase()
-                        .contains(current_input.to_lowercase().as_str())
-            })
-            .map(|item| item.clone())
-            .collect::<Vec<Vec<String>>>();
-    }
-}
-
 fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
     if let Some(SelectedInput::Filter) = &mut app.selected_input {
         match key_code {
             KeyCode::Char(c) => {
                 app.filter_input_text.push(c);
-                filter_by_current_input(app.filter_input_text.clone(), app, false);
+                app.filter_by_current_input(app.filter_input_text.clone(), false);
             }
             KeyCode::Backspace => {
                 app.filter_input_text.pop();
-                filter_by_current_input(app.filter_input_text.clone(), app, true);
+                app.filter_by_current_input(app.filter_input_text.clone(), true);
             }
             KeyCode::Enter => app.switch_to_item_view(),
 
@@ -101,7 +77,7 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
                 }
             }
             _ => {
-                filter_by_current_input(app.filter_input_text.clone(), app, true);
+                app.filter_by_current_input(app.filter_input_text.clone(), true);
             }
         }
     }
@@ -174,9 +150,6 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
             }
 
             app.selected_input = Some(SelectedInput::Filter);
-            app.tabs[app.selected_tab_index].filtered_view_items.data =
-                app.tabs[app.selected_tab_index].items.data.clone();
-            handle_filtered_mode(KeyCode::Null, app);
         }
         KeyCode::Char('s') => {
             if app.tabs.is_empty() {

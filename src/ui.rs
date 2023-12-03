@@ -79,24 +79,17 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
 
-    let text = if !app.filter_input_text.is_empty() {
-        if app.tabs[app.selected_tab_index]
-            .filtered_view_items
-            .data
-            .is_empty()
-        {
-            "".to_string()
-        } else {
-            app.tabs[app.selected_tab_index].filtered_view_items.data[app.tabs
-                [app.selected_tab_index]
-                .filtered_view_items
-                .selected_item_index][LogEntryIndices::LOG as usize]
-                .clone()
-        }
+    let text = if app.tabs[app.selected_tab_index]
+        .filtered_view_items
+        .data
+        .len()
+        == 0
+    {
+        "".to_owned()
     } else {
-        app.tabs[app.selected_tab_index].items.data
-            [app.tabs[app.selected_tab_index].items.selected_item_index]
-            [LogEntryIndices::LOG as usize]
+        app.tabs[app.selected_tab_index].filtered_view_items.data[app.tabs[app.selected_tab_index]
+            .filtered_view_items
+            .selected_item_index][LogEntryIndices::LOG as usize]
             .clone()
     };
     let preview = Paragraph::new(text).wrap(Wrap { trim: false }).block(
@@ -142,7 +135,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .height(1)
         .bottom_margin(0);
 
-    let mut items = &app.tabs[app.selected_tab_index].items.data;
+    let mut items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
 
     if !app.filter_input_text.is_empty() {
         // we're in filtered view mode so show filtered items instead of all items
@@ -216,14 +209,11 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .begin_symbol(Some("↑"))
                 .end_symbol(Some("↓"));
 
-            let mut scrollbar_state =
-                ScrollbarState::new(items.len()).position(if !app.filter_input_text.is_empty() {
-                    app.tabs[app.selected_tab_index]
-                        .filtered_view_items
-                        .selected_item_index
-                } else {
-                    app.tabs[app.selected_tab_index].items.selected_item_index
-                });
+            let mut scrollbar_state = ScrollbarState::new(items.len()).position(
+                app.tabs[app.selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index,
+            );
 
             f.render_stateful_widget(t, table_area, &mut app.state);
             f.render_stateful_widget(

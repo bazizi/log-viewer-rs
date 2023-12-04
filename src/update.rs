@@ -1,4 +1,4 @@
-use crate::{app::SelectedInput, event::EventHandler, App, ViewMode};
+use crate::{app::SelectedInput, event::EventHandler, tab::TabType, App, ViewMode};
 
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -120,13 +120,16 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
         KeyCode::Char('x') => {
             if app.tabs.is_empty() {
                 return;
+            } else if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type {
+                return;
             }
 
+            let index_to_remove = app.selected_tab_index;
             if app.selected_tab_index == app.tabs.len() - 1 {
                 app.selected_tab_index = app.selected_tab_index.saturating_sub(1);
             }
 
-            app.tabs.remove(app.selected_tab_index);
+            app.tabs.remove(index_to_remove);
         }
         KeyCode::Char('b') | KeyCode::Esc => {
             if app.view_mode.len() > 1 {

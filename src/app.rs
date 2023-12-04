@@ -11,6 +11,7 @@ use crate::parser::LogEntryIndices;
 use log::info;
 
 use crate::tab::Tab;
+use crate::tab::TabType;
 use crate::tab::TableItems;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
@@ -43,20 +44,59 @@ pub struct App {
 
 impl App {
     pub fn new(file_paths: Vec<String>) -> App {
-        App {
-            running: true,
-            state: TableState::default(),
-            view_mode: vec![ViewMode::Table].into(),
-            tabs: file_paths
+        const COMBINED_TAB_INDEX: usize = 0;
+
+        // The combined tab goes first
+        let mut tabs = vec![Tab::new(
+            "".to_owned(),
+            TableItems {
+                data: vec![],
+                selected_item_index: 0,
+            },
+            TabType::Combined,
+        )];
+
+        tabs.append(
+            &mut file_paths
                 .iter()
                 .map(|file_path| {
                     let table_items = TableItems {
                         data: parser::parse_log_by_path(&file_path).unwrap(),
                         selected_item_index: 0,
                     };
-                    Tab::new(file_path.to_owned(), table_items)
+                    Tab::new(file_path.to_owned(), table_items, TabType::Normal)
                 })
                 .collect::<Vec<Tab>>(),
+        );
+
+        for i in 0..tabs.len() {
+            if let TabType::Combined = tabs[i].tab_type {
+                continue;
+            }
+
+            let mut current_tab_items = tabs[i].filtered_view_items.data.clone();
+
+            tabs[COMBINED_TAB_INDEX]
+                .filtered_view_items
+                .data
+                .append(&mut current_tab_items);
+        }
+
+        tabs[COMBINED_TAB_INDEX]
+            .filtered_view_items
+            .data
+            .sort_by(|a, b| {
+                return a[LogEntryIndices::_DATE as usize].cmp(&b[LogEntryIndices::_DATE as usize]);
+            });
+
+        let items = tabs[COMBINED_TAB_INDEX].filtered_view_items.clone();
+        tabs[COMBINED_TAB_INDEX].set_items(items);
+
+        App {
+            running: true,
+            state: TableState::default(),
+            view_mode: vec![ViewMode::Table].into(),
+            tabs,
             selected_tab_index: 0,
             selected_input: None,
             filter_input_text: "".to_string(),
@@ -313,7 +353,8 @@ impl App {
                     data: parser::parse_log_by_path(&file_path).unwrap(),
                     selected_item_index: 0,
                 };
-                self.tabs.push(Tab::new(file_path, table_items));
+                self.tabs
+                    .push(Tab::new(file_path, table_items, TabType::Normal));
                 self.selected_tab_index = self.tabs.len() - 1;
             }
         }

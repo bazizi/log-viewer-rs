@@ -130,6 +130,7 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
             }
 
             app.tabs.remove(index_to_remove);
+            app.reload_combined_tab();
         }
         KeyCode::Char('b') | KeyCode::Esc => {
             if app.view_mode.len() > 1 {

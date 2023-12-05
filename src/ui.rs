@@ -1,3 +1,4 @@
+use crate::tab::TabType;
 use crate::{app::SelectedInput, parser::LogEntryIndices, App, ViewMode};
 
 use ratatui::layout::Margin;
@@ -89,7 +90,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     } else {
         app.tabs[app.selected_tab_index].filtered_view_items.data[app.tabs[app.selected_tab_index]
             .filtered_view_items
-            .selected_item_index][LogEntryIndices::LOG as usize]
+            .selected_item_index][LogEntryIndices::Log as usize]
             .clone()
     };
     let preview = Paragraph::new(text).wrap(Wrap { trim: false }).block(
@@ -127,7 +128,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
-    let header_cells = ["date", "tid", "level", "log"]
+    // Show the file name only in the combined tab
+    let column_names = if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type {
+        ["source", "date", "tid", "level", "log"].to_vec()
+    } else {
+        ["date", "tid", "level", "log"].to_vec()
+    };
+
+    let header_cells = column_names
         .iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
     let header = Row::new(header_cells)
@@ -135,17 +143,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .height(1)
         .bottom_margin(0);
 
-    let mut items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
-
-    if !app.filter_input_text.is_empty() {
-        // we're in filtered view mode so show filtered items instead of all items
-        items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
-    }
+    let items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
 
     match app.view_mode.back() {
         Some(ViewMode::TableItem(item)) => {
             app.selected_input = None;
-            let t = ratatui::widgets::Paragraph::new(&*items[*item][LogEntryIndices::LOG as usize])
+            let t = ratatui::widgets::Paragraph::new(&*items[*item][LogEntryIndices::Log as usize])
                 .block(
                     Block::default()
                         .title("Log entry")
@@ -178,9 +181,19 @@ pub fn render(f: &mut Frame, app: &mut App) {
                     .max()
                     .unwrap_or(0)
                     + 1;
-                let cells = item.iter().map(|c| Cell::from(&**c));
+
+                // Show the file name only in the combined tab
+                let starting_cell =
+                    if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type {
+                        LogEntryIndices::FileName as usize
+                    } else {
+                        LogEntryIndices::Date as usize
+                    };
+                let cells = item[starting_cell..item.len()]
+                    .iter()
+                    .map(|c| Cell::from(&**c));
                 let row = Row::new(cells).height(height as u16);
-                let color = match item[LogEntryIndices::LEVEL as usize].as_str() {
+                let color = match item[LogEntryIndices::Level as usize].as_str() {
                     "ERROR" => (Color::Red, Color::White),
                     "WARN" => (Color::LightYellow, Color::Black),
                     _ => (Color::Black, Color::White),
@@ -188,6 +201,27 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
                 row.style(Style::default().bg(color.0).fg(color.1))
             });
+
+            let column_widts = if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type
+            {
+                [
+                    // Show the file name only in the combined tab
+                    Constraint::Length(13),
+                    Constraint::Length(24),
+                    Constraint::Length(6),
+                    Constraint::Length(6),
+                    Constraint::Percentage(100),
+                ]
+                .to_vec()
+            } else {
+                [
+                    Constraint::Length(24),
+                    Constraint::Length(6),
+                    Constraint::Length(6),
+                    Constraint::Percentage(100),
+                ]
+                .to_vec()
+            };
 
             let t = Table::new(rows)
                 .header(header)
@@ -198,12 +232,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 )
                 .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
                 .highlight_symbol(">> ")
-                .widths(&[
-                    Constraint::Length(24),
-                    Constraint::Length(6),
-                    Constraint::Length(6),
-                    Constraint::Percentage(100),
-                ]);
+                .widths(&column_widts);
 
             let scrollbar = Scrollbar::default()
                 .orientation(ScrollbarOrientation::VerticalRight)

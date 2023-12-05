@@ -6,12 +6,13 @@ use log::{error, info};
 pub type LogEntry = Vec<String>;
 
 pub enum LogEntryIndices {
+    FileName,
     // _ID,
-    _DATE,
+    Date,
     // _PID,
     _TID,
-    LEVEL,
-    LOG,
+    Level,
+    Log,
 }
 
 pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
@@ -83,6 +84,12 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         }
 
         log_entries.push(vec![
+            std::path::Path::new(log_path.clone())
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
             // id.to_string(),
             // _session.to_string(),
             date.to_string(),

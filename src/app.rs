@@ -16,6 +16,7 @@ use crate::tab::TableItems;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
 const DEFAULT_SKIP_SIZE: usize = 5;
+const COMBINED_TAB_INDEX: usize = 0;
 
 pub enum SelectedInput {
     Filter,
@@ -44,8 +45,6 @@ pub struct App {
 
 impl App {
     pub fn new(file_paths: Vec<String>) -> App {
-        const COMBINED_TAB_INDEX: usize = 0;
-
         // The combined tab goes first
         let mut tabs = vec![Tab::new(
             "".to_owned(),
@@ -69,30 +68,7 @@ impl App {
                 .collect::<Vec<Tab>>(),
         );
 
-        for i in 0..tabs.len() {
-            if let TabType::Combined = tabs[i].tab_type {
-                continue;
-            }
-
-            let mut current_tab_items = tabs[i].filtered_view_items.data.clone();
-
-            tabs[COMBINED_TAB_INDEX]
-                .filtered_view_items
-                .data
-                .append(&mut current_tab_items);
-        }
-
-        tabs[COMBINED_TAB_INDEX]
-            .filtered_view_items
-            .data
-            .sort_by(|a, b| {
-                return a[LogEntryIndices::_DATE as usize].cmp(&b[LogEntryIndices::_DATE as usize]);
-            });
-
-        let items = tabs[COMBINED_TAB_INDEX].filtered_view_items.clone();
-        tabs[COMBINED_TAB_INDEX].set_items(items);
-
-        App {
+        let mut app = App {
             running: true,
             state: TableState::default(),
             view_mode: vec![ViewMode::Table].into(),
@@ -103,7 +79,41 @@ impl App {
             search_input_text: "".to_string(),
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
+        };
+
+        app.reload_combined_tab();
+
+        app
+    }
+
+    pub fn reload_combined_tab(&mut self) {
+        let tabs = &mut self.tabs;
+
+        let mut all_tab_items = vec![];
+        for i in 0..tabs.len() {
+            if let TabType::Combined = tabs[i].tab_type {
+                continue;
+            }
+
+            let mut current_tab_items = tabs[i].filtered_view_items.data.clone();
+            all_tab_items.append(&mut current_tab_items);
         }
+
+        tabs[COMBINED_TAB_INDEX].filtered_view_items.data = all_tab_items;
+
+        tabs[COMBINED_TAB_INDEX]
+            .filtered_view_items
+            .data
+            .sort_by(|a, b| {
+                return a[LogEntryIndices::Date as usize].cmp(&b[LogEntryIndices::Date as usize]);
+            });
+
+        tabs[COMBINED_TAB_INDEX]
+            .filtered_view_items
+            .selected_item_index = tabs[COMBINED_TAB_INDEX].filtered_view_items.data.len() - 1;
+
+        let items = tabs[COMBINED_TAB_INDEX].filtered_view_items.clone();
+        tabs[COMBINED_TAB_INDEX].set_items(items);
     }
 
     pub fn get_view_buffer_range(&self) -> Range<usize> {
@@ -178,7 +188,7 @@ impl App {
                 index = std::cmp::min(index.saturating_add(1), items.data.len() - 1);
 
                 for search_keyword in &keywords {
-                    if items.data[index][LogEntryIndices::LOG as usize]
+                    if items.data[index][LogEntryIndices::Log as usize]
                         .to_lowercase()
                         .contains(&search_keyword.to_lowercase())
                     {
@@ -229,7 +239,7 @@ impl App {
                 index = std::cmp::max(index.saturating_sub(1), 0);
 
                 for search_keyword in &keywords {
-                    if items.data[index][LogEntryIndices::LOG as usize]
+                    if items.data[index][LogEntryIndices::Log as usize]
                         .to_lowercase()
                         .contains(&search_keyword.to_lowercase())
                     {
@@ -390,7 +400,12 @@ impl App {
 
         self.filter_by_current_input(self.filter_input_text.clone());
 
+        let mut any_tabs_updated = false;
         for tab in &mut self.tabs {
+            if let TabType::Combined = tab.tab_type {
+                continue;
+            }
+
             let metadata = std::fs::metadata(&tab.file_path)?;
             let current_file_size = metadata.len().try_into().unwrap_or(0);
             if tab.last_file_size != current_file_size {
@@ -398,7 +413,12 @@ impl App {
                 tab.last_file_size = current_file_size;
                 tab.filtered_view_items.selected_item_index =
                     tab.filtered_view_items.data.len() - 1;
+                any_tabs_updated = true;
             }
+        }
+
+        if any_tabs_updated {
+            self.reload_combined_tab();
         }
 
         self.state
@@ -427,7 +447,7 @@ impl App {
                     let mut include_item = false;
                     for filter_keyword in &keywords {
                         include_item = include_item
-                            || item[LogEntryIndices::LOG as usize]
+                            || item[LogEntryIndices::Log as usize]
                                 .to_lowercase()
                                 .contains(filter_keyword.to_lowercase().as_str());
 

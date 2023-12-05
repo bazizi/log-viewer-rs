@@ -61,6 +61,7 @@ impl Tab {
 
     pub fn set_items(&mut self, items: TableItems) {
         self.items = items;
+        self.items.selected_item_index = self.items.data.len() - 1;
     }
 
     pub fn reload(&mut self) -> Result<()> {

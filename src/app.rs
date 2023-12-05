@@ -36,11 +36,11 @@ pub struct App {
     pub tabs: Vec<Tab>,
     pub selected_tab_index: usize,
     pub view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
-    pub selected_input: Option<SelectedInput>,
-    pub filter_input_text: String,
-    pub search_input_text: String,
-    pub view_buffer_size: usize,
-    pub tail_enabled: bool, // TODO: add tailing support
+    selected_input: Option<SelectedInput>,
+    filter_input_text: String,
+    search_input_text: String,
+    view_buffer_size: usize,
+    tail_enabled: bool, // TODO: add tailing support
 }
 
 impl App {
@@ -84,6 +84,38 @@ impl App {
         app.reload_combined_tab();
 
         app
+    }
+
+    pub fn search_input_text(&self) -> &String {
+        return &self.search_input_text;
+    }
+
+    pub fn search_input_text_mut(&mut self) -> &mut String {
+        return &mut self.search_input_text;
+    }
+
+    pub fn filter_input_text(&self) -> &String {
+        return &self.filter_input_text;
+    }
+
+    pub fn filter_input_text_mut(&mut self) -> &mut String {
+        return &mut self.filter_input_text;
+    }
+
+    pub fn selected_input(&self) -> &Option<SelectedInput> {
+        return &self.selected_input;
+    }
+
+    pub fn selected_input_mut(&mut self) -> &mut Option<SelectedInput> {
+        return &mut self.selected_input;
+    }
+
+    pub fn tail_enabled(&self) -> bool {
+        return self.tail_enabled;
+    }
+
+    pub fn set_tail_enabled(&mut self, tail_enabled: bool) {
+        self.tail_enabled = tail_enabled;
     }
 
     pub fn reload_combined_tab(&mut self) {
@@ -394,7 +426,7 @@ impl App {
     }
 
     pub fn update_stale_tabs(&mut self) -> Result<()> {
-        if !self.tail_enabled {
+        if !self.tail_enabled() {
             return Ok(());
         }
 

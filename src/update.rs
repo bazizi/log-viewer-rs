@@ -34,7 +34,7 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
         return;
     }
 
-    if let Some(SelectedInput::Filter) = app.selected_input {
+    if let Some(SelectedInput::Filter) = app.selected_input() {
         handle_filtered_mode(key.code, app);
         return;
     } else if let Some(ViewMode::SearchView) = app.view_mode.back() {
@@ -46,15 +46,15 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
 }
 
 fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
-    if let Some(SelectedInput::Filter) = &mut app.selected_input {
+    if let Some(SelectedInput::Filter) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
-                app.filter_input_text.push(c);
-                app.filter_by_current_input(app.filter_input_text.clone());
+                app.filter_input_text_mut().push(c);
+                app.filter_by_current_input(app.filter_input_text().clone());
             }
             KeyCode::Backspace => {
-                app.filter_input_text.pop();
-                app.filter_by_current_input(app.filter_input_text.clone());
+                app.filter_input_text_mut().pop();
+                app.filter_by_current_input(app.filter_input_text().clone());
             }
             KeyCode::Enter => app.switch_to_item_view(),
 
@@ -73,29 +73,29 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
                 if let Some(ViewMode::TableItem(_)) = app.view_mode.back() {
                     app.view_mode.pop_back();
                 } else {
-                    app.selected_input = None;
+                    *app.selected_input_mut() = None;
                 }
             }
             _ => {
-                app.filter_by_current_input(app.filter_input_text.clone());
+                app.filter_by_current_input(app.filter_input_text().clone());
             }
         }
     }
 }
 
 fn handle_search_mode(key_code: KeyCode, app: &mut App) {
-    if let Some(SelectedInput::Search) = &mut app.selected_input {
+    if let Some(SelectedInput::Search) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
-                app.search_input_text.push(c);
+                app.search_input_text_mut().push(c);
             }
             KeyCode::Backspace => {
-                app.search_input_text.pop();
+                app.search_input_text_mut().pop();
             }
             // Arrow keys to select filtered items
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
-            KeyCode::Down => app.next(Some(app.search_input_text.clone())),
-            KeyCode::Up => app.previous(Some(app.search_input_text.clone())),
+            KeyCode::Down => app.next(Some(app.search_input_text().clone())),
+            KeyCode::Up => app.previous(Some(app.search_input_text().clone())),
             KeyCode::Left => app.prev_tab(),
             KeyCode::Right => app.next_tab(),
             KeyCode::PageDown => app.skipping_next(),
@@ -104,7 +104,7 @@ fn handle_search_mode(key_code: KeyCode, app: &mut App) {
             KeyCode::End => app.end(),
 
             KeyCode::Esc => {
-                app.selected_input = None;
+                *app.selected_input_mut() = None;
                 app.view_mode.pop_back();
             }
             _ => {}
@@ -153,18 +153,18 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
                 return;
             }
 
-            app.selected_input = Some(SelectedInput::Filter);
+            *app.selected_input_mut() = Some(SelectedInput::Filter);
         }
         KeyCode::Char('s') => {
             if app.tabs.is_empty() {
                 return;
             }
 
-            app.selected_input = Some(SelectedInput::Search);
+            *app.selected_input_mut() = Some(SelectedInput::Search);
             app.view_mode.push_back(ViewMode::SearchView);
         }
         KeyCode::Char('t') => {
-            app.tail_enabled = !app.tail_enabled;
+            app.set_tail_enabled(!app.tail_enabled());
         }
         _ => {}
     }

@@ -7,7 +7,7 @@ use crossterm::{
 };
 
 use ratatui::{backend::CrosstermBackend, Terminal};
-use std::{env, io};
+use std::{cell::RefCell, env, io, rc::Rc};
 
 use anyhow::Result;
 use std::io::stdout;

@@ -183,7 +183,7 @@ impl App {
             .selected_item_index = tabs[COMBINED_TAB_INDEX].filtered_view_items.data.len() - 1;
 
         let items = tabs[COMBINED_TAB_INDEX].filtered_view_items.clone();
-        tabs[COMBINED_TAB_INDEX].set_items(items);
+        *tabs[COMBINED_TAB_INDEX].items_mut() = items;
     }
 
     pub fn get_view_buffer_range(&self) -> Range<usize> {

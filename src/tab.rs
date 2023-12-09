@@ -54,12 +54,10 @@ impl Tab {
 
     pub fn reset_filtered_view_items(&mut self) {
         self.filtered_view_items = self.items.clone();
-        self.filtered_view_items.selected_item_index = self.items.data.len() - 1;
     }
 
-    pub fn set_items(&mut self, items: TableItems) {
-        self.items = items;
-        self.items.selected_item_index = self.items.data.len() - 1;
+    pub fn items_mut(&mut self) -> &mut TableItems {
+        &mut self.items
     }
 
     pub fn items(&self) -> &TableItems {

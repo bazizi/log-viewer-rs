@@ -82,8 +82,8 @@ fn run() -> Result<()> {
             .collect::<Vec<String>>(),
     )));
 
+    let _file_monitor_thread = FileMonitor::new(Arc::clone(&app));
     let events = EventHandler::new(250);
-    let _ = FileMonitor::new(Arc::clone(&app));
 
     while *app.lock().unwrap().running() {
         terminal.draw(|f| render(f, &mut app.lock().unwrap()))?;

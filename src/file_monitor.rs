@@ -7,19 +7,20 @@ use crate::parser::parse_log_by_path;
 use crate::tab::TableItems;
 
 pub struct FileMonitor {
-    /// Event handler thread.
-    handler: thread::JoinHandle<()>,
+    _handler: thread::JoinHandle<()>,
 }
 
 impl FileMonitor {
     pub fn new(app: Arc<Mutex<App>>) -> Self {
         let handler = thread::spawn(move || loop {
+            // this code attempts to minimize the duration the App mutex is locked
+
             if !app.lock().unwrap().tail_enabled() {
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 continue;
             }
 
-            let file_paths = app
+            let file_paths_and_sizes = app
                 .lock()
                 .unwrap()
                 .tabs()
@@ -29,12 +30,17 @@ impl FileMonitor {
 
             let mut file_path_to_log_entries = std::collections::HashMap::new();
 
-            for (file_path, _) in file_paths {
+            for (file_path, last_file_size) in file_paths_and_sizes {
                 let file_meta = std::fs::metadata(&file_path);
                 if file_meta.is_err() {
                     continue;
                 }
                 let current_file_size = file_meta.unwrap().len();
+
+                if current_file_size == last_file_size.try_into().unwrap() {
+                    continue;
+                }
+
                 if let Ok(log_entries) = parse_log_by_path(&file_path) {
                     file_path_to_log_entries
                         .insert(file_path.clone(), (log_entries, current_file_size));
@@ -56,10 +62,10 @@ impl FileMonitor {
                     .take()
                     .unwrap();
 
-                tab.set_items(TableItems {
+                *tab.items_mut() = TableItems {
                     selected_item_index: data.len() - 1,
                     data,
-                });
+                };
 
                 tab.reset_filtered_view_items();
 
@@ -73,6 +79,6 @@ impl FileMonitor {
             }
         });
 
-        FileMonitor { handler }
+        FileMonitor { _handler: handler }
     }
 }

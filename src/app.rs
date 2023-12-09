@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::ops::Range;
+use std::vec;
 
 use ratatui::widgets::TableState;
 use rfd::FileDialog;
@@ -58,7 +59,7 @@ impl App {
                 .iter()
                 .map(|file_path| {
                     let table_items = TableItems {
-                        data: parser::parse_log_by_path(&file_path).unwrap(),
+                        data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
                         selected_item_index: 0,
                     };
                     Tab::new(file_path.to_owned(), table_items, TabType::Normal)
@@ -430,7 +431,7 @@ impl App {
             for file in files {
                 let file_path = file.to_str().unwrap().to_string();
                 let table_items = TableItems {
-                    data: parser::parse_log_by_path(&file_path).unwrap(),
+                    data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
                     selected_item_index: 0,
                 };
                 self.tabs

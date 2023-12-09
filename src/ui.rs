@@ -5,7 +5,6 @@ use ratatui::layout::Margin;
 use ratatui::widgets::Scrollbar;
 use ratatui::widgets::ScrollbarOrientation;
 use ratatui::widgets::ScrollbarState;
-use ratatui::widgets::TableState;
 
 use ratatui::{
     layout::{Constraint, Layout},
@@ -262,7 +261,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .selected_item_index,
     );
 
-    let mut state: TableState = TableState::default();
+    let mut state = app.state().clone();
     f.render_stateful_widget(t, table_area, &mut state);
     f.render_stateful_widget(
         scrollbar,

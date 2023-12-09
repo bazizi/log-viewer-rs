@@ -1,7 +1,4 @@
-use crate::parser::parse_log_by_path;
 use crate::parser::LogEntry;
-
-use anyhow::Result;
 
 #[derive(Clone)]
 pub struct TableItems {
@@ -57,6 +54,7 @@ impl Tab {
 
     pub fn reset_filtered_view_items(&mut self) {
         self.filtered_view_items = self.items.clone();
+        self.filtered_view_items.selected_item_index = self.items.data.len() - 1;
     }
 
     pub fn set_items(&mut self, items: TableItems) {
@@ -64,14 +62,7 @@ impl Tab {
         self.items.selected_item_index = self.items.data.len() - 1;
     }
 
-    pub fn reload(&mut self) -> Result<()> {
-        if let TabType::Combined = self.tab_type {
-            return Ok(());
-        }
-
-        let log_lines = parse_log_by_path(&self.file_path)?;
-        self.items.selected_item_index = 0;
-        self.items.data = log_lines;
-        Ok(())
+    pub fn items(&self) -> &TableItems {
+        &self.items
     }
 }

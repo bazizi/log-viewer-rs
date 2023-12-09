@@ -8,8 +8,6 @@ use anyhow::Result;
 use log::info;
 
 pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
-    app.update_stale_tabs()?;
-
     match events.next()? {
         Event::Tick => {}
         Event::Key(key) => {

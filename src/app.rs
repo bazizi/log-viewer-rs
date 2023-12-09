@@ -4,8 +4,6 @@ use std::ops::Range;
 use ratatui::widgets::TableState;
 use rfd::FileDialog;
 
-use anyhow::Result;
-
 use crate::parser;
 use crate::parser::LogEntryIndices;
 use log::info;
@@ -84,6 +82,10 @@ impl App {
         app.reload_combined_tab();
 
         app
+    }
+
+    pub fn state(&self) -> &TableState {
+        return &self.state;
     }
 
     pub fn state_mut(&mut self) -> &mut TableState {
@@ -461,46 +463,10 @@ impl App {
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
-    pub fn update_stale_tabs(&mut self) -> Result<()> {
-        if !self.tail_enabled() {
-            return Ok(());
-        }
-
-        self.filter_by_current_input(self.filter_input_text.clone());
-
-        let mut any_tabs_updated = false;
-        for tab in &mut self.tabs {
-            if let TabType::Combined = tab.tab_type {
-                continue;
-            }
-
-            let metadata = std::fs::metadata(&tab.file_path)?;
-            let current_file_size = metadata.len().try_into().unwrap_or(0);
-            if tab.last_file_size != current_file_size {
-                tab.reload()?;
-                tab.last_file_size = current_file_size;
-                tab.filtered_view_items.selected_item_index =
-                    tab.filtered_view_items.data.len() - 1;
-                any_tabs_updated = true;
-            }
-        }
-
-        if any_tabs_updated {
-            self.reload_combined_tab();
-        }
-
-        self.state
-            .select(Some(self.calculate_position_in_view_buffer()));
-
-        Ok(())
-    }
-
     pub fn filter_by_current_input(&mut self, filter: String) {
         for tab in &mut self.tabs {
-            tab.reset_filtered_view_items();
-
             tab.filtered_view_items.data = tab
-                .filtered_view_items
+                .items()
                 .data
                 .iter()
                 .filter(|item| {

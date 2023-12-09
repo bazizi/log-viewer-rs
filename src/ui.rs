@@ -5,6 +5,7 @@ use ratatui::layout::Margin;
 use ratatui::widgets::Scrollbar;
 use ratatui::widgets::ScrollbarOrientation;
 use ratatui::widgets::ScrollbarState;
+use ratatui::widgets::TableState;
 
 use ratatui::{
     layout::{Constraint, Layout},
@@ -73,14 +74,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
             f.render_widget(menu_item, menu_item_area[i]);
         }
 
-        if app.tabs.is_empty() {
+        if app.tabs().is_empty() {
             return;
         }
     }
 
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
 
-    let text = if app.tabs[app.selected_tab_index]
+    let text = if app.tabs()[app.selected_tab_index()]
         .filtered_view_items
         .data
         .len()
@@ -88,7 +89,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
     {
         "".to_owned()
     } else {
-        app.tabs[app.selected_tab_index].filtered_view_items.data[app.tabs[app.selected_tab_index]
+        app.tabs()[app.selected_tab_index()]
+            .filtered_view_items
+            .data[app.tabs()[app.selected_tab_index()]
             .filtered_view_items
             .selected_item_index][LogEntryIndices::Log as usize]
             .clone()
@@ -129,7 +132,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     f.render_widget(search, search_area);
 
     // Show the file name only in the combined tab
-    let column_names = if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type {
+    let column_names = if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
         ["source", "date", "tid", "level", "log"].to_vec()
     } else {
         ["date", "tid", "level", "log"].to_vec()
@@ -143,14 +146,16 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .height(1)
         .bottom_margin(0);
 
-    let (is_in_table_item_mode, item) = match app.view_mode.back() {
+    let (is_in_table_item_mode, item) = match app.view_mode().back() {
         Some(ViewMode::TableItem(item)) => (true, Some(*item)),
         _ => (false, None),
     };
 
     if is_in_table_item_mode {
         *app.selected_input_mut() = None;
-        let items: &Vec<Vec<String>> = &app.tabs[app.selected_tab_index].filtered_view_items.data;
+        let items = &app.tabs()[app.selected_tab_index()]
+            .filtered_view_items
+            .data;
         let t =
             ratatui::widgets::Paragraph::new(&*items[item.unwrap()][LogEntryIndices::Log as usize])
                 .block(
@@ -165,7 +170,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     }
 
     let tabs = ratatui::widgets::Tabs::new(
-        app.tabs
+        app.tabs()
             .iter()
             .map(|tab| tab.name.clone())
             .collect::<Vec<String>>(),
@@ -175,38 +180,47 @@ pub fn render(f: &mut Frame, app: &mut App) {
     .highlight_style(Style::default().yellow())
     .divider(ratatui::symbols::bar::FULL)
     .highlight_style(Style::default().on_cyan())
-    .select(app.selected_tab_index);
+    .select(app.selected_tab_index());
 
     f.render_widget(tabs, tabs_area);
-    let items = &app.tabs[app.selected_tab_index].filtered_view_items.data;
-    let rows = items[app.get_view_buffer_range()].iter().map(|item| {
-        let height = item
-            .iter()
-            .map(|content| content.chars().filter(|c| *c == '\n').count())
-            .max()
-            .unwrap_or(0)
-            + 1;
 
-        // Show the file name only in the combined tab
-        let starting_cell = if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type {
-            LogEntryIndices::FileName as usize
-        } else {
-            LogEntryIndices::Date as usize
-        };
-        let cells = item[starting_cell..item.len()]
-            .iter()
-            .map(|c| Cell::from(&**c));
-        let row = Row::new(cells).height(height as u16);
-        let color = match item[LogEntryIndices::Level as usize].as_str() {
-            "ERROR" => (Color::Red, Color::White),
-            "WARN" => (Color::LightYellow, Color::Black),
-            _ => (Color::Black, Color::White),
-        };
+    let selected_tab_index = app.selected_tab_index();
+    let (rows, num_items) = {
+        let tabs = &app.tabs();
+        let items = &tabs[selected_tab_index].filtered_view_items.data;
+        let rows = items[app.get_view_buffer_range()].iter().map(|item| {
+            let height = item
+                .iter()
+                .map(|content| content.chars().filter(|c| *c == '\n').count())
+                .max()
+                .unwrap_or(0)
+                + 1;
 
-        row.style(Style::default().bg(color.0).fg(color.1))
-    });
+            // Show the file name only in the combined tab
+            let starting_cell =
+                if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
+                    LogEntryIndices::FileName as usize
+                } else {
+                    LogEntryIndices::Date as usize
+                };
+            let cells = item[starting_cell..item.len()]
+                .iter()
+                .map(|c| Cell::from(&**c));
+            let row = Row::new(cells).height(height as u16);
+            let color = match item[LogEntryIndices::Level as usize].as_str() {
+                "ERROR" => (Color::Red, Color::White),
+                "WARN" => (Color::LightYellow, Color::Black),
+                _ => (Color::Black, Color::White),
+            };
 
-    let column_widts = if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type {
+            row.style(Style::default().bg(color.0).fg(color.1))
+        });
+
+        let num_rows = rows.len();
+        (rows, num_rows)
+    };
+
+    let column_widts = if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
         [
             // Show the file name only in the combined tab
             Constraint::Length(13),
@@ -231,7 +245,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(app.tabs[app.selected_tab_index].name.clone()),
+                .title(app.tabs()[app.selected_tab_index()].name.clone()),
         )
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">> ")
@@ -242,13 +256,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .begin_symbol(Some("↑"))
         .end_symbol(Some("↓"));
 
-    let mut scrollbar_state = ScrollbarState::new(items.len()).position(
-        app.tabs[app.selected_tab_index]
+    let mut scrollbar_state = ScrollbarState::new(num_items).position(
+        app.tabs()[app.selected_tab_index()]
             .filtered_view_items
             .selected_item_index,
     );
 
-    f.render_stateful_widget(t, table_area, &mut app.state);
+    let mut state: TableState = TableState::default();
+    f.render_stateful_widget(t, table_area, &mut state);
     f.render_stateful_widget(
         scrollbar,
         table_area.inner(&Margin {
@@ -257,4 +272,6 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }),
         &mut scrollbar_state,
     );
+
+    *app.state_mut() = state;
 }

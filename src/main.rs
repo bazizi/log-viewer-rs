@@ -7,7 +7,7 @@ use crossterm::{
 };
 
 use ratatui::{backend::CrosstermBackend, Terminal};
-use std::{cell::RefCell, env, io, rc::Rc};
+use std::{env, io};
 
 use anyhow::Result;
 use std::io::stdout;
@@ -80,7 +80,7 @@ fn run() -> Result<()> {
             .collect::<Vec<String>>(),
     );
 
-    while app.running {
+    while *app.running() {
         terminal.draw(|f| render(f, &mut app))?;
         update(&events, &mut app)?;
     }

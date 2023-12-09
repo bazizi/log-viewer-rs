@@ -37,7 +37,7 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
     if let Some(SelectedInput::Filter) = app.selected_input() {
         handle_filtered_mode(key.code, app);
         return;
-    } else if let Some(ViewMode::SearchView) = app.view_mode.back() {
+    } else if let Some(ViewMode::SearchView) = app.view_mode().back() {
         handle_search_mode(key.code, app);
         return;
     }
@@ -70,8 +70,8 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
             KeyCode::End => app.end(),
 
             KeyCode::Esc => {
-                if let Some(ViewMode::TableItem(_)) = app.view_mode.back() {
-                    app.view_mode.pop_back();
+                if let Some(ViewMode::TableItem(_)) = app.view_mode().back() {
+                    app.view_mode_mut().pop_back();
                 } else {
                     *app.selected_input_mut() = None;
                 }
@@ -105,7 +105,7 @@ fn handle_search_mode(key_code: KeyCode, app: &mut App) {
 
             KeyCode::Esc => {
                 *app.selected_input_mut() = None;
-                app.view_mode.pop_back();
+                app.view_mode_mut().pop_back();
             }
             _ => {}
         }
@@ -115,26 +115,26 @@ fn handle_search_mode(key_code: KeyCode, app: &mut App) {
 fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
     match key_code {
         KeyCode::Char('q') => {
-            app.running = false;
+            *app.running_mut() = false;
         }
         KeyCode::Char('x') => {
-            if app.tabs.is_empty() {
+            if app.tabs().is_empty() {
                 return;
-            } else if let TabType::Combined = app.tabs[app.selected_tab_index].tab_type {
+            } else if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
                 return;
             }
 
-            let index_to_remove = app.selected_tab_index;
-            if app.selected_tab_index == app.tabs.len() - 1 {
-                app.selected_tab_index = app.selected_tab_index.saturating_sub(1);
+            let index_to_remove = app.selected_tab_index();
+            if app.selected_tab_index() == app.tabs().len() - 1 {
+                *app.selected_tab_index_mut() = app.selected_tab_index().saturating_sub(1);
             }
 
-            app.tabs.remove(index_to_remove);
+            app.tabs_mut().remove(index_to_remove);
             app.reload_combined_tab();
         }
         KeyCode::Char('b') | KeyCode::Esc => {
-            if app.view_mode.len() > 1 {
-                app.view_mode.pop_back();
+            if app.view_mode().len() > 1 {
+                app.view_mode_mut().pop_back();
             }
         }
         KeyCode::Home => app.start(),
@@ -149,19 +149,19 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
         KeyCode::PageUp => app.skipping_prev(),
 
         KeyCode::Char('f') => {
-            if app.tabs.is_empty() {
+            if app.tabs().is_empty() {
                 return;
             }
 
             *app.selected_input_mut() = Some(SelectedInput::Filter);
         }
         KeyCode::Char('s') => {
-            if app.tabs.is_empty() {
+            if app.tabs().is_empty() {
                 return;
             }
 
             *app.selected_input_mut() = Some(SelectedInput::Search);
-            app.view_mode.push_back(ViewMode::SearchView);
+            app.view_mode_mut().push_back(ViewMode::SearchView);
         }
         KeyCode::Char('t') => {
             app.set_tail_enabled(!app.tail_enabled());

@@ -29,13 +29,13 @@ pub enum ViewMode {
 }
 
 pub struct App {
-    pub running: bool,
-    pub state: TableState,
+    running: bool,
+    state: TableState,
 
     // we keep a history of view modes to be able to switch back
-    pub tabs: Vec<Tab>,
-    pub selected_tab_index: usize,
-    pub view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
+    tabs: Vec<Tab>,
+    selected_tab_index: usize,
+    view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
     selected_input: Option<SelectedInput>,
     filter_input_text: String,
     search_input_text: String,
@@ -86,12 +86,40 @@ impl App {
         app
     }
 
+    pub fn state_mut(&mut self) -> &mut TableState {
+        return &mut self.state;
+    }
+
     pub fn search_input_text(&self) -> &String {
         return &self.search_input_text;
     }
 
     pub fn search_input_text_mut(&mut self) -> &mut String {
         return &mut self.search_input_text;
+    }
+
+    pub fn tabs(&self) -> &Vec<Tab> {
+        return &self.tabs;
+    }
+
+    pub fn tabs_mut(&mut self) -> &mut Vec<Tab> {
+        return &mut self.tabs;
+    }
+
+    pub fn running(&self) -> &bool {
+        return &self.running;
+    }
+
+    pub fn running_mut(&mut self) -> &mut bool {
+        return &mut self.running;
+    }
+
+    pub fn selected_tab_index(&self) -> usize {
+        return self.selected_tab_index;
+    }
+
+    pub fn selected_tab_index_mut(&mut self) -> &mut usize {
+        return &mut self.selected_tab_index;
     }
 
     pub fn filter_input_text(&self) -> &String {
@@ -108,6 +136,14 @@ impl App {
 
     pub fn selected_input_mut(&mut self) -> &mut Option<SelectedInput> {
         return &mut self.selected_input;
+    }
+
+    pub fn view_mode(&self) -> &VecDeque<ViewMode> {
+        return &self.view_mode;
+    }
+
+    pub fn view_mode_mut(&mut self) -> &mut VecDeque<ViewMode> {
+        return &mut self.view_mode;
     }
 
     pub fn tail_enabled(&self) -> bool {

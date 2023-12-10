@@ -1,10 +1,9 @@
 use std::collections::VecDeque;
 use std::ops::Range;
+use std::vec;
 
 use ratatui::widgets::TableState;
 use rfd::FileDialog;
-
-use anyhow::Result;
 
 use crate::parser;
 use crate::parser::LogEntryIndices;
@@ -29,18 +28,18 @@ pub enum ViewMode {
 }
 
 pub struct App {
-    pub running: bool,
-    pub state: TableState,
+    running: bool,
+    state: TableState,
 
     // we keep a history of view modes to be able to switch back
-    pub tabs: Vec<Tab>,
-    pub selected_tab_index: usize,
-    pub view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
-    pub selected_input: Option<SelectedInput>,
-    pub filter_input_text: String,
-    pub search_input_text: String,
-    pub view_buffer_size: usize,
-    pub tail_enabled: bool, // TODO: add tailing support
+    tabs: Vec<Tab>,
+    selected_tab_index: usize,
+    view_mode: VecDeque<ViewMode>,
+    selected_input: Option<SelectedInput>,
+    filter_input_text: String,
+    search_input_text: String,
+    view_buffer_size: usize,
+    tail_enabled: bool,
 }
 
 impl App {
@@ -60,7 +59,7 @@ impl App {
                 .iter()
                 .map(|file_path| {
                     let table_items = TableItems {
-                        data: parser::parse_log_by_path(&file_path).unwrap(),
+                        data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
                         selected_item_index: 0,
                     };
                     Tab::new(file_path.to_owned(), table_items, TabType::Normal)
@@ -84,6 +83,78 @@ impl App {
         app.reload_combined_tab();
 
         app
+    }
+
+    pub fn state(&self) -> &TableState {
+        return &self.state;
+    }
+
+    pub fn state_mut(&mut self) -> &mut TableState {
+        return &mut self.state;
+    }
+
+    pub fn search_input_text(&self) -> &String {
+        return &self.search_input_text;
+    }
+
+    pub fn search_input_text_mut(&mut self) -> &mut String {
+        return &mut self.search_input_text;
+    }
+
+    pub fn tabs(&self) -> &Vec<Tab> {
+        return &self.tabs;
+    }
+
+    pub fn tabs_mut(&mut self) -> &mut Vec<Tab> {
+        return &mut self.tabs;
+    }
+
+    pub fn running(&self) -> &bool {
+        return &self.running;
+    }
+
+    pub fn running_mut(&mut self) -> &mut bool {
+        return &mut self.running;
+    }
+
+    pub fn selected_tab_index(&self) -> usize {
+        return self.selected_tab_index;
+    }
+
+    pub fn selected_tab_index_mut(&mut self) -> &mut usize {
+        return &mut self.selected_tab_index;
+    }
+
+    pub fn filter_input_text(&self) -> &String {
+        return &self.filter_input_text;
+    }
+
+    pub fn filter_input_text_mut(&mut self) -> &mut String {
+        return &mut self.filter_input_text;
+    }
+
+    pub fn selected_input(&self) -> &Option<SelectedInput> {
+        return &self.selected_input;
+    }
+
+    pub fn selected_input_mut(&mut self) -> &mut Option<SelectedInput> {
+        return &mut self.selected_input;
+    }
+
+    pub fn view_mode(&self) -> &VecDeque<ViewMode> {
+        return &self.view_mode;
+    }
+
+    pub fn view_mode_mut(&mut self) -> &mut VecDeque<ViewMode> {
+        return &mut self.view_mode;
+    }
+
+    pub fn tail_enabled(&self) -> bool {
+        return self.tail_enabled;
+    }
+
+    pub fn set_tail_enabled(&mut self, tail_enabled: bool) {
+        self.tail_enabled = tail_enabled;
     }
 
     pub fn reload_combined_tab(&mut self) {
@@ -113,19 +184,24 @@ impl App {
             .selected_item_index = tabs[COMBINED_TAB_INDEX].filtered_view_items.data.len() - 1;
 
         let items = tabs[COMBINED_TAB_INDEX].filtered_view_items.clone();
-        tabs[COMBINED_TAB_INDEX].set_items(items);
+        *tabs[COMBINED_TAB_INDEX].items_mut() = items;
     }
 
     pub fn get_view_buffer_range(&self) -> Range<usize> {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
+            return 0..0;
+        }
+
         let items = &self.tabs[self.selected_tab_index].filtered_view_items;
         let num_items = self.tabs[self.selected_tab_index]
             .filtered_view_items
             .data
             .len();
-
-        if self.tabs.is_empty() || items.data.is_empty() {
-            return 0..0;
-        }
 
         // gets the view range based on the view_buffer_size
         std::cmp::max(
@@ -144,7 +220,12 @@ impl App {
     }
 
     fn calculate_position_in_view_buffer(&self) -> usize {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return 0;
         }
 
@@ -161,7 +242,12 @@ impl App {
     }
 
     pub fn next(&mut self, search: Option<String>) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -213,7 +299,12 @@ impl App {
     }
 
     pub fn previous(&mut self, search: Option<String>) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -264,7 +355,12 @@ impl App {
     }
 
     pub fn skipping_next(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -284,7 +380,12 @@ impl App {
     }
 
     pub fn skipping_prev(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -300,6 +401,15 @@ impl App {
     }
 
     pub fn start(&mut self) {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
+            return;
+        }
+
         self.tabs[self.selected_tab_index]
             .filtered_view_items
             .selected_item_index = 0;
@@ -309,7 +419,12 @@ impl App {
     }
 
     pub fn end(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -326,7 +441,12 @@ impl App {
     }
 
     pub fn switch_to_item_view(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -360,7 +480,7 @@ impl App {
             for file in files {
                 let file_path = file.to_str().unwrap().to_string();
                 let table_items = TableItems {
-                    data: parser::parse_log_by_path(&file_path).unwrap(),
+                    data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
                     selected_item_index: 0,
                 };
                 self.tabs
@@ -393,46 +513,10 @@ impl App {
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
-    pub fn update_stale_tabs(&mut self) -> Result<()> {
-        if !self.tail_enabled {
-            return Ok(());
-        }
-
-        self.filter_by_current_input(self.filter_input_text.clone());
-
-        let mut any_tabs_updated = false;
-        for tab in &mut self.tabs {
-            if let TabType::Combined = tab.tab_type {
-                continue;
-            }
-
-            let metadata = std::fs::metadata(&tab.file_path)?;
-            let current_file_size = metadata.len().try_into().unwrap_or(0);
-            if tab.last_file_size != current_file_size {
-                tab.reload()?;
-                tab.last_file_size = current_file_size;
-                tab.filtered_view_items.selected_item_index =
-                    tab.filtered_view_items.data.len() - 1;
-                any_tabs_updated = true;
-            }
-        }
-
-        if any_tabs_updated {
-            self.reload_combined_tab();
-        }
-
-        self.state
-            .select(Some(self.calculate_position_in_view_buffer()));
-
-        Ok(())
-    }
-
     pub fn filter_by_current_input(&mut self, filter: String) {
         for tab in &mut self.tabs {
-            tab.reset_filtered_view_items();
-
             tab.filtered_view_items.data = tab
-                .filtered_view_items
+                .items()
                 .data
                 .iter()
                 .filter(|item| {

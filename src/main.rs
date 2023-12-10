@@ -7,7 +7,7 @@ use crossterm::{
 };
 
 use ratatui::{backend::CrosstermBackend, Terminal};
-use std::{env, io};
+use std::{env, io, sync::Arc};
 
 use anyhow::Result;
 use std::io::stdout;
@@ -31,6 +31,9 @@ mod event;
 use crate::event::EventHandler;
 
 mod tab;
+
+mod file_monitor;
+use file_monitor::FileMonitor;
 
 fn main() -> Result<()> {
     startup()?;
@@ -58,7 +61,6 @@ fn shutdown() -> Result<()> {
 fn run() -> Result<()> {
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
-    let events = EventHandler::new(250);
 
     let args = env::args();
     let args = args.into_iter().collect::<Vec<String>>();
@@ -73,16 +75,20 @@ fn run() -> Result<()> {
     )?;
 
     // create app and run it
-    let mut app = App::new(
+    let app = std::sync::Arc::new(std::sync::Mutex::new(App::new(
         args.iter()
             .skip(1)
             .map(|item| item.clone())
+            .filter(|item| !item.is_empty())
             .collect::<Vec<String>>(),
-    );
+    )));
 
-    while app.running {
-        terminal.draw(|f| render(f, &mut app))?;
-        update(&events, &mut app)?;
+    let _file_monitor_thread = FileMonitor::new(Arc::clone(&app));
+    let events = EventHandler::new(250);
+
+    while *app.lock().unwrap().running() {
+        terminal.draw(|f| render(f, &mut app.lock().unwrap()))?;
+        update(&events, &mut app.lock().unwrap())?;
     }
 
     Ok(())

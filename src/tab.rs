@@ -1,7 +1,4 @@
-use crate::parser::parse_log_by_path;
 use crate::parser::LogEntry;
-
-use anyhow::Result;
 
 #[derive(Clone)]
 pub struct TableItems {
@@ -27,11 +24,11 @@ impl Tab {
     pub fn new(file_path: String, table_items: TableItems, tab_type: TabType) -> Self {
         if let TabType::Combined = tab_type {
             return Tab {
-                name: "Combined".to_owned(), // TODO: Use Option<T>
+                name: "Combined".to_owned(),
                 items: table_items.clone(),
                 filtered_view_items: table_items,
-                last_file_size: 0,        // TODO: Use Option<T>
-                file_path: "".to_owned(), // TODO: Use Option<T>
+                last_file_size: 0,
+                file_path: "".to_owned(),
                 tab_type,
             };
         }
@@ -59,19 +56,11 @@ impl Tab {
         self.filtered_view_items = self.items.clone();
     }
 
-    pub fn set_items(&mut self, items: TableItems) {
-        self.items = items;
-        self.items.selected_item_index = self.items.data.len() - 1;
+    pub fn items_mut(&mut self) -> &mut TableItems {
+        &mut self.items
     }
 
-    pub fn reload(&mut self) -> Result<()> {
-        if let TabType::Combined = self.tab_type {
-            return Ok(());
-        }
-
-        let log_lines = parse_log_by_path(&self.file_path)?;
-        self.items.selected_item_index = 0;
-        self.items.data = log_lines;
-        Ok(())
+    pub fn items(&self) -> &TableItems {
+        &self.items
     }
 }

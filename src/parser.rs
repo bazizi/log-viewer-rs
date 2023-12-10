@@ -84,7 +84,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         }
 
         log_entries.push(vec![
-            std::path::Path::new(log_path.clone())
+            std::path::Path::new(log_path)
                 .file_name()
                 .unwrap()
                 .to_str()

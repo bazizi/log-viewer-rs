@@ -79,6 +79,7 @@ fn run() -> Result<()> {
         args.iter()
             .skip(1)
             .map(|item| item.clone())
+            .filter(|item| !item.is_empty())
             .collect::<Vec<String>>(),
     )));
 

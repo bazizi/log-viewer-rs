@@ -34,12 +34,12 @@ pub struct App {
     // we keep a history of view modes to be able to switch back
     tabs: Vec<Tab>,
     selected_tab_index: usize,
-    view_mode: VecDeque<ViewMode>, // TODO; Merge selected_input & view_mode together
+    view_mode: VecDeque<ViewMode>,
     selected_input: Option<SelectedInput>,
     filter_input_text: String,
     search_input_text: String,
     view_buffer_size: usize,
-    tail_enabled: bool, // TODO: add tailing support
+    tail_enabled: bool,
 }
 
 impl App {
@@ -188,15 +188,20 @@ impl App {
     }
 
     pub fn get_view_buffer_range(&self) -> Range<usize> {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
+            return 0..0;
+        }
+
         let items = &self.tabs[self.selected_tab_index].filtered_view_items;
         let num_items = self.tabs[self.selected_tab_index]
             .filtered_view_items
             .data
             .len();
-
-        if self.tabs.is_empty() || items.data.is_empty() {
-            return 0..0;
-        }
 
         // gets the view range based on the view_buffer_size
         std::cmp::max(
@@ -215,7 +220,12 @@ impl App {
     }
 
     fn calculate_position_in_view_buffer(&self) -> usize {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return 0;
         }
 
@@ -232,7 +242,12 @@ impl App {
     }
 
     pub fn next(&mut self, search: Option<String>) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -284,7 +299,12 @@ impl App {
     }
 
     pub fn previous(&mut self, search: Option<String>) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -335,7 +355,12 @@ impl App {
     }
 
     pub fn skipping_next(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -355,7 +380,12 @@ impl App {
     }
 
     pub fn skipping_prev(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -371,6 +401,15 @@ impl App {
     }
 
     pub fn start(&mut self) {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
+            return;
+        }
+
         self.tabs[self.selected_tab_index]
             .filtered_view_items
             .selected_item_index = 0;
@@ -380,7 +419,12 @@ impl App {
     }
 
     pub fn end(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 
@@ -397,7 +441,12 @@ impl App {
     }
 
     pub fn switch_to_item_view(&mut self) {
-        if self.tabs.is_empty() {
+        if self.tabs.is_empty()
+            || self.tabs[self.selected_tab_index]
+                .filtered_view_items
+                .data
+                .is_empty()
+        {
             return;
         }
 

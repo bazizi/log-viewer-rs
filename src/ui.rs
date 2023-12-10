@@ -155,6 +155,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
         let items = &app.tabs()[app.selected_tab_index()]
             .filtered_view_items
             .data;
+        if items.is_empty() {
+            return;
+        }
+
         let t =
             ratatui::widgets::Paragraph::new(&*items[item.unwrap()][LogEntryIndices::Log as usize])
                 .block(
@@ -187,6 +191,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let (rows, num_items) = {
         let tabs = &app.tabs();
         let items = &tabs[selected_tab_index].filtered_view_items.data;
+        if items.is_empty() {
+            return;
+        }
+
         let rows = items[app.get_view_buffer_range()].iter().map(|item| {
             let height = item
                 .iter()
@@ -247,7 +255,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .title(app.tabs()[app.selected_tab_index()].name.clone()),
         )
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
-        .highlight_symbol(">> ")
+        .highlight_symbol(">>")
         .widths(&column_widts);
 
     let scrollbar = Scrollbar::default()

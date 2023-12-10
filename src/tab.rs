@@ -24,11 +24,11 @@ impl Tab {
     pub fn new(file_path: String, table_items: TableItems, tab_type: TabType) -> Self {
         if let TabType::Combined = tab_type {
             return Tab {
-                name: "Combined".to_owned(), // TODO: Use Option<T>
+                name: "Combined".to_owned(),
                 items: table_items.clone(),
                 filtered_view_items: table_items,
-                last_file_size: 0,        // TODO: Use Option<T>
-                file_path: "".to_owned(), // TODO: Use Option<T>
+                last_file_size: 0,
+                file_path: "".to_owned(),
                 tab_type,
             };
         }

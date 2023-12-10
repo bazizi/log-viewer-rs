@@ -1,6 +1,6 @@
 use crate::{app::SelectedInput, event::EventHandler, tab::TabType, App, ViewMode};
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::event::Event;
 use anyhow::Result;
@@ -33,17 +33,17 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
     }
 
     if let Some(SelectedInput::Filter) = app.selected_input() {
-        handle_filtered_mode(key.code, app);
+        handle_filtered_mode(key.code, key.modifiers, app);
         return;
     } else if let Some(ViewMode::SearchView) = app.view_mode().back() {
-        handle_search_mode(key.code, app);
+        handle_search_mode(key.code, key.modifiers, app);
         return;
     }
 
     handle_normal_mode(key.code, app);
 }
 
-fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
+fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut App) {
     if let Some(SelectedInput::Filter) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
@@ -51,7 +51,11 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
                 app.filter_by_current_input(app.filter_input_text().clone());
             }
             KeyCode::Backspace => {
-                app.filter_input_text_mut().pop();
+                if key_modifiers == KeyModifiers::CONTROL {
+                    app.filter_input_text_mut().clear();
+                } else {
+                    app.filter_input_text_mut().pop();
+                }
                 app.filter_by_current_input(app.filter_input_text().clone());
             }
             KeyCode::Enter => app.switch_to_item_view(),
@@ -81,14 +85,18 @@ fn handle_filtered_mode(key_code: KeyCode, app: &mut App) {
     }
 }
 
-fn handle_search_mode(key_code: KeyCode, app: &mut App) {
+fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut App) {
     if let Some(SelectedInput::Search) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
                 app.search_input_text_mut().push(c);
             }
             KeyCode::Backspace => {
-                app.search_input_text_mut().pop();
+                if key_modifiers == KeyModifiers::CONTROL {
+                    app.search_input_text_mut().clear();
+                } else {
+                    app.search_input_text_mut().pop();
+                }
             }
             // Arrow keys to select filtered items
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.

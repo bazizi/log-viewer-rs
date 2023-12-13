@@ -67,15 +67,16 @@ impl FileMonitor {
                     data,
                 };
 
-                tab.reset_filtered_view_items();
-
                 tab.last_file_size = file_size as usize;
 
                 any_tabs_updated = true;
             }
 
             if any_tabs_updated {
-                app.lock().unwrap().reload_combined_tab();
+                let filter_text = app.lock().unwrap().filter_input_text().clone();
+                let mut app = app.lock().unwrap();
+                app.filter_by_current_input(filter_text);
+                app.reload_combined_tab();
             }
         });
 

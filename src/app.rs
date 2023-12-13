@@ -170,14 +170,11 @@ impl App {
             all_tab_items.append(&mut current_tab_items);
         }
 
-        tabs[COMBINED_TAB_INDEX].filtered_view_items.data = all_tab_items;
+        all_tab_items.sort_by(|a, b| {
+            return a[LogEntryIndices::Date as usize].cmp(&b[LogEntryIndices::Date as usize]);
+        });
 
-        tabs[COMBINED_TAB_INDEX]
-            .filtered_view_items
-            .data
-            .sort_by(|a, b| {
-                return a[LogEntryIndices::Date as usize].cmp(&b[LogEntryIndices::Date as usize]);
-            });
+        tabs[COMBINED_TAB_INDEX].filtered_view_items.data = all_tab_items;
 
         tabs[COMBINED_TAB_INDEX]
             .filtered_view_items
@@ -487,6 +484,7 @@ impl App {
                     .push(Tab::new(file_path, table_items, TabType::Normal));
                 self.selected_tab_index = self.tabs.len() - 1;
             }
+            self.reload_combined_tab();
         }
     }
 

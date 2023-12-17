@@ -2,17 +2,40 @@ use crate::tab::TabType;
 use crate::{app::SelectedInput, parser::LogEntryIndices, App, ViewMode};
 
 use ratatui::layout::Margin;
+use ratatui::style::Stylize;
 use ratatui::widgets::Scrollbar;
 use ratatui::widgets::ScrollbarOrientation;
 use ratatui::widgets::ScrollbarState;
-
 use ratatui::{
     layout::{Constraint, Layout},
     prelude::Direction,
-    style::{Color, Modifier, Style, Stylize},
+    style::{Color, Modifier, Style},
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, Wrap},
     Frame,
 };
+
+use regex::Regex;
+
+use serde_json::Value;
+
+lazy_static! {
+    static ref JSON_REGEX: Regex =
+        Regex::new(r#"(?P<PRE>[^\{]+)(?P<JSON_CANDIDATE>\{[^\])(?P<POST>.*)"#).unwrap();
+}
+
+fn beatify_enclosed_json(log: &str) -> Option<String> {
+    if let (Some(first_curly), Some(last_curly)) = (log.find('{'), log.rfind('}')) {
+        let json_part = &log[first_curly..last_curly + 1];
+        if let Ok(value) = serde_json::from_str::<Value>(json_part.to_string().as_str()) {
+            if let Ok(pretty_str) = serde_json::to_string_pretty(&value) {
+                return Some(
+                    log[0..first_curly].to_owned() + &pretty_str + &log[last_curly..log.len()],
+                );
+            }
+        }
+    }
+    None
+}
 
 pub fn render(f: &mut Frame, app: &mut App) {
     let is_in_table_item_mode = match app.view_mode().back() {
@@ -109,7 +132,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }
 
         let item_view_area = areas[1];
-        let t = ratatui::widgets::Paragraph::new(app.selected_log_entry_in_text())
+
+        let mut log_text = app.selected_log_entry_in_text();
+
+        if let Some(json_beautified) = beatify_enclosed_json(&log_text) {
+            log_text = json_beautified;
+        }
+
+        let t = ratatui::widgets::Paragraph::new(log_text)
             .block(
                 Block::default()
                     .title(" [Log entry] ")

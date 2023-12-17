@@ -1,4 +1,11 @@
+- Allow editing input text
+- Save config upon exit
+- Fix bug happening file filtering in tail mode: upon removal of filter, the list keeps showing previously filtered items
+- Unit test and support for multiple log formats
+- Demo video
 - Filter sessions (dropdown)
-- Smart JSON
 - [H]ighlight selected line
+- highlight entries matching search
+- Add updater
+- Add help UI
 - Bold searched keywords

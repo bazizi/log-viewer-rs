@@ -35,6 +35,9 @@ mod tab;
 mod file_monitor;
 use file_monitor::FileMonitor;
 
+#[macro_use]
+extern crate lazy_static;
+
 fn main() -> Result<()> {
     startup()?;
     let status = run();

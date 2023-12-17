@@ -69,7 +69,7 @@ fn run() -> Result<()> {
         SetTitle(
             args.iter()
                 .map(|e| e.clone())
-                .reduce(|acc, e| { acc.to_string() + &e })
+                .reduce(|acc, e| { acc.to_string() + " " + &e })
                 .unwrap()
         )
     )?;

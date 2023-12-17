@@ -40,6 +40,7 @@ pub struct App {
     search_input_text: String,
     view_buffer_size: usize,
     tail_enabled: bool,
+    copying_to_clipboard: bool,
 }
 
 impl App {
@@ -78,6 +79,7 @@ impl App {
             search_input_text: "".to_string(),
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
+            copying_to_clipboard: false,
         };
 
         app.reload_combined_tab();
@@ -91,6 +93,14 @@ impl App {
 
     pub fn state_mut(&mut self) -> &mut TableState {
         return &mut self.state;
+    }
+
+    pub fn copying_to_clipboard(&mut self) -> bool {
+        return self.copying_to_clipboard;
+    }
+
+    pub fn copying_to_clipboard_mut(&mut self) -> &mut bool {
+        return &mut self.copying_to_clipboard;
     }
 
     pub fn search_input_text(&self) -> &String {
@@ -549,5 +559,16 @@ impl App {
                 0
             };
         }
+    }
+
+    pub fn selected_log_entry_in_text(&self) -> String {
+        let items = &self.tabs()[self.selected_tab_index()].filtered_view_items;
+
+        let date = &items.data[items.selected_item_index][LogEntryIndices::Date as usize];
+        let level = &items.data[items.selected_item_index][LogEntryIndices::Level as usize];
+        let text = &items.data[items.selected_item_index][LogEntryIndices::Log as usize];
+        let log_entry = format!("{:<25}{:<8}{}", date, level, text);
+
+        log_entry
     }
 }

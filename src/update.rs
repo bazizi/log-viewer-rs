@@ -8,6 +8,8 @@ use anyhow::Result;
 use log::info;
 
 pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
+    *app.copying_to_clipboard_mut() = false;
+
     match events.next()? {
         Event::Tick => {}
         Event::Key(key) => {
@@ -171,6 +173,25 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
         }
         KeyCode::Char('t') => {
             app.set_tail_enabled(!app.tail_enabled());
+        }
+        KeyCode::Char('c') => {
+            // Currently only windows supported
+            if !cfg!(windows) {
+                return;
+            }
+
+            // temporary hack: remove pipe operators as escaping them doesn't work in CMD
+            let log_str = app
+                .selected_log_entry_in_text()
+                .replace('>', "")
+                .replace('<', "")
+                .replace('|', "");
+            std::process::Command::new("cmd")
+                .args(["/C", format!("echo {log_str} | clip.exe").as_str()])
+                .output()
+                .unwrap();
+            *app.copying_to_clipboard_mut() = true;
+            return;
         }
         _ => {}
     }

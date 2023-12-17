@@ -15,9 +15,16 @@ use ratatui::{
 };
 
 pub fn render(f: &mut Frame, app: &mut App) {
+    let is_in_table_item_mode = match app.view_mode().back() {
+        Some(ViewMode::TableItem(_)) => true,
+        _ => false,
+    };
+
     let areas = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
+        .constraints(if is_in_table_item_mode {
+            [Constraint::Length(3), Constraint::Percentage(100)].as_ref()
+        } else {
             [
                 Constraint::Length(3),      // top menu area
                 Constraint::Length(3),      // search/filter
@@ -25,23 +32,27 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 Constraint::Percentage(10), // preview
                 Constraint::Percentage(90), // table
             ]
-            .as_ref(),
-        )
+            .as_ref()
+        })
         .split(f.size());
 
     {
         let menu_area = areas[0];
+        const TAIL_PREFIX: &str = "[t]ail ";
+        const FILTER_PREFIX: &str = "[f]ilter";
+        const SEARCH_PREFIX: &str = "[s]earch";
+        const COPY_PREFIX: &str = "[c]opy";
         let menu = [
             "[o]pen",
-            &("[t]ail ".to_owned()
+            &(TAIL_PREFIX.to_owned()
                 + if app.tail_enabled() {
                     "(enabled)"
                 } else {
                     "(disabled)"
                 }),
-            "[s]earch",
-            "[f]ilter",
-            "[c]opy",
+            SEARCH_PREFIX,
+            FILTER_PREFIX,
+            COPY_PREFIX,
             "move [Arrow keys]",
             "select [enter]",
             "[b]ack [Esc]",
@@ -60,22 +71,55 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .split(menu_area);
 
         for i in 0..menu.len() {
-            let borders = if i == menu.len() - 1 {
-                Borders::ALL
+            let mut menu_item = Paragraph::new(menu[i])
+                .block(Block::default().borders(Borders::ALL))
+                .alignment(ratatui::layout::Alignment::Center);
+
+            let search_focused = if let Some(SelectedInput::Search) = app.selected_input() {
+                true
             } else {
-                Borders::LEFT | Borders::TOP | Borders::BOTTOM
+                false
             };
 
-            let menu_item = Paragraph::new(menu[i])
-                .block(Block::default().borders(borders))
-                .alignment(ratatui::layout::Alignment::Center)
-                .on_blue();
+            if (menu[i].starts_with(TAIL_PREFIX) && (!app.tail_enabled()))
+                || (menu[i].starts_with(FILTER_PREFIX) && app.filter_input_text().is_empty())
+                || (menu[i].starts_with(SEARCH_PREFIX) && !search_focused)
+                || (menu[i].starts_with(COPY_PREFIX) && (!app.copying_to_clipboard()))
+            {
+                menu_item = menu_item.on_red();
+            } else {
+                menu_item = menu_item.on_green();
+            }
+
             f.render_widget(menu_item, menu_item_area[i]);
         }
 
         if app.tabs().is_empty() {
             return;
         }
+    }
+
+    if is_in_table_item_mode {
+        *app.selected_input_mut() = None;
+        let items = &app.tabs()[app.selected_tab_index()]
+            .filtered_view_items
+            .data;
+        if items.is_empty() {
+            return;
+        }
+
+        let item_view_area = areas[1];
+        let t = ratatui::widgets::Paragraph::new(app.selected_log_entry_in_text())
+            .block(
+                Block::default()
+                    .title(" [Log entry] ")
+                    .title_alignment(ratatui::layout::Alignment::Center)
+                    .borders(Borders::TOP | Borders::BOTTOM),
+            )
+            .style(Style::default().fg(Color::White).bg(Color::Black))
+            .wrap(Wrap { trim: false });
+        f.render_widget(t, item_view_area);
+        return;
     }
 
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
@@ -132,9 +176,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // Show the file name only in the combined tab
     let column_names = if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
-        ["source", "date", "tid", "level", "log"].to_vec()
+        ["source", "date", "level", "log"].to_vec()
     } else {
-        ["date", "tid", "level", "log"].to_vec()
+        ["date", "level", "log"].to_vec()
     };
 
     let header_cells = column_names
@@ -144,33 +188,6 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .style(Style::default().bg(Color::Cyan))
         .height(1)
         .bottom_margin(0);
-
-    let (is_in_table_item_mode, item) = match app.view_mode().back() {
-        Some(ViewMode::TableItem(item)) => (true, Some(*item)),
-        _ => (false, None),
-    };
-
-    if is_in_table_item_mode {
-        *app.selected_input_mut() = None;
-        let items = &app.tabs()[app.selected_tab_index()]
-            .filtered_view_items
-            .data;
-        if items.is_empty() {
-            return;
-        }
-
-        let t =
-            ratatui::widgets::Paragraph::new(&*items[item.unwrap()][LogEntryIndices::Log as usize])
-                .block(
-                    Block::default()
-                        .title("Log entry")
-                        .borders(Borders::TOP | Borders::BOTTOM),
-                )
-                .style(Style::default().fg(Color::White).bg(Color::Black))
-                .wrap(Wrap { trim: false });
-        f.render_widget(t, table_area);
-        return;
-    }
 
     let tabs = ratatui::widgets::Tabs::new(
         app.tabs()
@@ -233,14 +250,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
             Constraint::Length(13),
             Constraint::Length(24),
             Constraint::Length(6),
-            Constraint::Length(6),
             Constraint::Percentage(100),
         ]
         .to_vec()
     } else {
         [
             Constraint::Length(24),
-            Constraint::Length(6),
             Constraint::Length(6),
             Constraint::Percentage(100),
         ]

@@ -52,10 +52,6 @@ impl Tab {
         }
     }
 
-    pub fn reset_filtered_view_items(&mut self) {
-        self.filtered_view_items = self.items.clone();
-    }
-
     pub fn items_mut(&mut self) -> &mut TableItems {
         &mut self.items
     }

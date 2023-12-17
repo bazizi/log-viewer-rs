@@ -10,7 +10,7 @@ pub enum LogEntryIndices {
     // _ID,
     Date,
     // _PID,
-    _TID,
+    // _TID,
     Level,
     Log,
 }
@@ -57,7 +57,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         let _id = line_num;
         let date = &cap["date"];
         let _pid = &cap["pid"];
-        let tid = &cap["tid"];
+        let _tid = &cap["tid"];
         let level = &cap["level"];
         log += &cap["log"];
 
@@ -94,7 +94,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
             // _session.to_string(),
             date.to_string(),
             // pid.to_string(),
-            tid.to_string(),
+            // tid.to_string(),
             level.to_string(),
             log.to_string(),
         ]);

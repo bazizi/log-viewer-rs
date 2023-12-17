@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::app::App;
 use crate::parser::parse_log_by_path;
-use crate::tab::TableItems;
+use crate::tab::{TabType, TableItems};
 
 pub struct FileMonitor {
     _handler: thread::JoinHandle<()>,
@@ -14,19 +14,27 @@ impl FileMonitor {
     pub fn new(app: Arc<Mutex<App>>) -> Self {
         let handler = thread::spawn(move || loop {
             // this code attempts to minimize the duration the App mutex is locked
-
             if !app.lock().unwrap().tail_enabled() {
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 continue;
             }
 
-            let file_paths_and_sizes = app
-                .lock()
-                .unwrap()
-                .tabs()
-                .iter()
-                .map(|tab| (tab.file_path.clone(), tab.last_file_size))
-                .collect::<Vec<(String, usize)>>();
+            let file_paths_and_sizes = {
+                let app = app.lock().unwrap();
+                let current_tab = &app.tabs()[app.selected_tab_index()];
+                let file_paths_and_sizes = if let TabType::Combined = current_tab.tab_type {
+                    // we're in the combined tab so return all tabs info
+                    app.tabs()
+                        .iter()
+                        .map(|tab| (tab.file_path.clone(), tab.last_file_size))
+                        .collect::<Vec<(String, usize)>>()
+                } else {
+                    // only return the current tab info
+                    vec![(current_tab.file_path.clone(), current_tab.last_file_size)]
+                };
+
+                file_paths_and_sizes
+            };
 
             let mut file_path_to_log_entries = std::collections::HashMap::new();
 
@@ -67,15 +75,16 @@ impl FileMonitor {
                     data,
                 };
 
-                tab.reset_filtered_view_items();
-
                 tab.last_file_size = file_size as usize;
 
                 any_tabs_updated = true;
             }
 
             if any_tabs_updated {
-                app.lock().unwrap().reload_combined_tab();
+                let filter_text = app.lock().unwrap().filter_input_text().clone();
+                let mut app = app.lock().unwrap();
+                app.filter_by_current_input(filter_text);
+                app.reload_combined_tab();
             }
         });
 

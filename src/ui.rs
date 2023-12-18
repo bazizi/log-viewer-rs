@@ -83,13 +83,11 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 false
             };
 
-            if (menu[i].starts_with(TAIL_PREFIX) && (!app.tail_enabled()))
-                || (menu[i].starts_with(FILTER_PREFIX) && app.filter_input_text().is_empty())
-                || (menu[i].starts_with(SEARCH_PREFIX) && !search_focused)
-                || (menu[i].starts_with(COPY_PREFIX) && (!app.copying_to_clipboard()))
+            if (menu[i].starts_with(TAIL_PREFIX) && (app.tail_enabled()))
+                || (menu[i].starts_with(FILTER_PREFIX) && (!app.filter_input_text().is_empty()))
+                || (menu[i].starts_with(SEARCH_PREFIX) && search_focused)
+                || (menu[i].starts_with(COPY_PREFIX) && app.copying_to_clipboard())
             {
-                menu_item = menu_item.on_red();
-            } else {
                 menu_item = menu_item.on_green();
             }
 

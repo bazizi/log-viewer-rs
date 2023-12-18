@@ -2,17 +2,19 @@ use crate::tab::TabType;
 use crate::{app::SelectedInput, parser::LogEntryIndices, App, ViewMode};
 
 use ratatui::layout::Margin;
+use ratatui::style::Stylize;
 use ratatui::widgets::Scrollbar;
 use ratatui::widgets::ScrollbarOrientation;
 use ratatui::widgets::ScrollbarState;
-
 use ratatui::{
     layout::{Constraint, Layout},
     prelude::Direction,
-    style::{Color, Modifier, Style, Stylize},
+    style::{Color, Modifier, Style},
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, Wrap},
     Frame,
 };
+
+use crate::utils::{beatify_enclosed_json, highlight_keyword_in_text};
 
 pub fn render(f: &mut Frame, app: &mut App) {
     let is_in_table_item_mode = match app.view_mode().back() {
@@ -81,13 +83,11 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 false
             };
 
-            if (menu[i].starts_with(TAIL_PREFIX) && (!app.tail_enabled()))
-                || (menu[i].starts_with(FILTER_PREFIX) && app.filter_input_text().is_empty())
-                || (menu[i].starts_with(SEARCH_PREFIX) && !search_focused)
-                || (menu[i].starts_with(COPY_PREFIX) && (!app.copying_to_clipboard()))
+            if (menu[i].starts_with(TAIL_PREFIX) && (app.tail_enabled()))
+                || (menu[i].starts_with(FILTER_PREFIX) && (!app.filter_input_text().is_empty()))
+                || (menu[i].starts_with(SEARCH_PREFIX) && search_focused)
+                || (menu[i].starts_with(COPY_PREFIX) && app.copying_to_clipboard())
             {
-                menu_item = menu_item.on_red();
-            } else {
                 menu_item = menu_item.on_green();
             }
 
@@ -109,7 +109,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }
 
         let item_view_area = areas[1];
-        let t = ratatui::widgets::Paragraph::new(app.selected_log_entry_in_text())
+
+        let mut log_text = app.selected_log_entry_in_text();
+
+        if let Some(json_beautified) = beatify_enclosed_json(&log_text) {
+            log_text = json_beautified;
+        }
+
+        let t = ratatui::widgets::Paragraph::new(log_text)
             .block(
                 Block::default()
                     .title(" [Log entry] ")
@@ -229,7 +236,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 };
             let cells = item[starting_cell..item.len()]
                 .iter()
-                .map(|c| Cell::from(&**c));
+                .map(|c| Cell::from(highlight_keyword_in_text(&c, app.search_input_text())));
             let row = Row::new(cells).height(height as u16);
             let color = match item[LogEntryIndices::Level as usize].as_str() {
                 "ERROR" => (Color::Red, Color::White),

@@ -45,7 +45,7 @@ impl FileMonitor {
                 }
                 let current_file_size = file_meta.unwrap().len();
 
-                if current_file_size == last_file_size.try_into().unwrap() {
+                if current_file_size == TryInto::<u64>::try_into(last_file_size).unwrap() {
                     continue;
                 }
 

@@ -35,6 +35,8 @@ mod tab;
 mod file_monitor;
 use file_monitor::FileMonitor;
 
+mod utils;
+
 #[macro_use]
 extern crate lazy_static;
 

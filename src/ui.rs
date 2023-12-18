@@ -14,28 +14,7 @@ use ratatui::{
     Frame,
 };
 
-use regex::Regex;
-
-use serde_json::Value;
-
-lazy_static! {
-    static ref JSON_REGEX: Regex =
-        Regex::new(r#"(?P<PRE>[^\{]+)(?P<JSON_CANDIDATE>\{[^\])(?P<POST>.*)"#).unwrap();
-}
-
-fn beatify_enclosed_json(log: &str) -> Option<String> {
-    if let (Some(first_curly), Some(last_curly)) = (log.find('{'), log.rfind('}')) {
-        let json_part = &log[first_curly..last_curly + 1];
-        if let Ok(value) = serde_json::from_str::<Value>(json_part.to_string().as_str()) {
-            if let Ok(pretty_str) = serde_json::to_string_pretty(&value) {
-                return Some(
-                    log[0..first_curly].to_owned() + &pretty_str + &log[last_curly..log.len()],
-                );
-            }
-        }
-    }
-    None
-}
+use crate::utils::{beatify_enclosed_json, highlight_keyword_in_text};
 
 pub fn render(f: &mut Frame, app: &mut App) {
     let is_in_table_item_mode = match app.view_mode().back() {
@@ -259,7 +238,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 };
             let cells = item[starting_cell..item.len()]
                 .iter()
-                .map(|c| Cell::from(&**c));
+                .map(|c| Cell::from(highlight_keyword_in_text(&c, app.search_input_text())));
             let row = Row::new(cells).height(height as u16);
             let color = match item[LogEntryIndices::Level as usize].as_str() {
                 "ERROR" => (Color::Red, Color::White),

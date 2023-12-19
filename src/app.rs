@@ -9,6 +9,7 @@ use crate::parser;
 use crate::parser::LogEntryIndices;
 use log::info;
 
+use crate::input_element::InputTextElement;
 use crate::tab::Tab;
 use crate::tab::TabType;
 use crate::tab::TableItems;
@@ -36,8 +37,8 @@ pub struct App {
     selected_tab_index: usize,
     view_mode: VecDeque<ViewMode>,
     selected_input: Option<SelectedInput>,
-    filter_input_text: String,
-    search_input_text: String,
+    filter_input_text: InputTextElement,
+    search_input_text: InputTextElement,
     view_buffer_size: usize,
     tail_enabled: bool,
     copying_to_clipboard: bool,
@@ -75,8 +76,8 @@ impl App {
             tabs,
             selected_tab_index: 0,
             selected_input: None,
-            filter_input_text: "".to_string(),
-            search_input_text: "".to_string(),
+            filter_input_text: InputTextElement::new("".to_string()),
+            search_input_text: InputTextElement::new("".to_string()),
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
             copying_to_clipboard: false,
@@ -103,14 +104,6 @@ impl App {
         return &mut self.copying_to_clipboard;
     }
 
-    pub fn search_input_text(&self) -> &String {
-        return &self.search_input_text;
-    }
-
-    pub fn search_input_text_mut(&mut self) -> &mut String {
-        return &mut self.search_input_text;
-    }
-
     pub fn tabs(&self) -> &Vec<Tab> {
         return &self.tabs;
     }
@@ -133,14 +126,6 @@ impl App {
 
     pub fn selected_tab_index_mut(&mut self) -> &mut usize {
         return &mut self.selected_tab_index;
-    }
-
-    pub fn filter_input_text(&self) -> &String {
-        return &self.filter_input_text;
-    }
-
-    pub fn filter_input_text_mut(&mut self) -> &mut String {
-        return &mut self.filter_input_text;
     }
 
     pub fn selected_input(&self) -> &Option<SelectedInput> {
@@ -457,7 +442,7 @@ impl App {
             return;
         }
 
-        if !self.filter_input_text.is_empty() {
+        if !self.filter_input_text.text().is_empty() {
             self.view_mode.push_back(ViewMode::TableItem(
                 self.tabs[self.selected_tab_index]
                     .filtered_view_items
@@ -570,5 +555,21 @@ impl App {
         let log_entry = format!("{:<25}{:<8}{}", date, level, text);
 
         log_entry
+    }
+
+    pub fn filter_input_text(&self) -> &InputTextElement {
+        &self.filter_input_text
+    }
+
+    pub fn filter_input_text_mut(&mut self) -> &mut InputTextElement {
+        &mut self.filter_input_text
+    }
+
+    pub fn search_input_text(&self) -> &InputTextElement {
+        &self.search_input_text
+    }
+
+    pub fn search_input_text_mut(&mut self) -> &mut InputTextElement {
+        &mut self.search_input_text
     }
 }

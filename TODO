@@ -1,11 +1,8 @@
-- Allow editing input text
+- Bugfix: Copying multiline log entries
 - Save config upon exit
-- Fix bug happening file filtering in tail mode: upon removal of filter, the list keeps showing previously filtered items
+- Bugfix: While filtering in tail mode: upon removal of filter, the list keeps showing previously filtered items
 - Unit test and support for multiple log formats
 - Demo video
 - Filter sessions (dropdown)
-- [H]ighlight selected line
-- highlight entries matching search
 - Add updater
 - Add help UI
-- Bold searched keywords

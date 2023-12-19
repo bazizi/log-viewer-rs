@@ -81,7 +81,7 @@ impl FileMonitor {
             }
 
             if any_tabs_updated {
-                let filter_text = app.lock().unwrap().filter_input_text().clone();
+                let filter_text = app.lock().unwrap().filter_input_text().text().clone();
                 let mut app = app.lock().unwrap();
                 app.filter_by_current_input(filter_text);
                 app.reload_combined_tab();

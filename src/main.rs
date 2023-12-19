@@ -35,6 +35,12 @@ mod tab;
 mod file_monitor;
 use file_monitor::FileMonitor;
 
+mod input_element;
+mod utils;
+
+#[macro_use]
+extern crate lazy_static;
+
 fn main() -> Result<()> {
     startup()?;
     let status = run();
@@ -69,7 +75,7 @@ fn run() -> Result<()> {
         SetTitle(
             args.iter()
                 .map(|e| e.clone())
-                .reduce(|acc, e| { acc.to_string() + &e })
+                .reduce(|acc, e| { acc.to_string() + " " + &e })
                 .unwrap()
         )
     )?;

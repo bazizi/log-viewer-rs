@@ -3,23 +3,28 @@ use std::io::Read;
 
 use log::{error, info};
 
+use regex::Regex;
+
 pub type LogEntry = Vec<String>;
+
+lazy_static! {
+static ref REGEX : Regex  = Regex::new(
+        r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
+    ).unwrap();
+}
 
 pub enum LogEntryIndices {
     FileName,
     // _ID,
     Date,
     // _PID,
-    _TID,
+    // _TID,
     Level,
     Log,
 }
 
 pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
     info!("Attempting to parse log file [{}]...", log_path);
-    let re = regex::Regex::new(
-        r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
-    )?;
 
     let mut line_num = 0;
     let mut _session = 0;
@@ -39,7 +44,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
             continue;
         }
 
-        let mut captures = re.captures_iter(&line);
+        let mut captures = REGEX.captures_iter(&line);
 
         let cap;
         if let Some(tmp) = captures.next() {
@@ -57,7 +62,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         let _id = line_num;
         let date = &cap["date"];
         let _pid = &cap["pid"];
-        let tid = &cap["tid"];
+        let _tid = &cap["tid"];
         let level = &cap["level"];
         log += &cap["log"];
 
@@ -73,7 +78,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
 
             line_num += 1;
             let next_line = lines[line_num];
-            let mut cap = re.captures_iter(&next_line);
+            let mut cap = REGEX.captures_iter(&next_line);
             if cap.next().is_none() {
                 log += next_line;
                 continue;
@@ -94,7 +99,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
             // _session.to_string(),
             date.to_string(),
             // pid.to_string(),
-            tid.to_string(),
+            // tid.to_string(),
             level.to_string(),
             log.to_string(),
         ]);

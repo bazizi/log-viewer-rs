@@ -8,6 +8,8 @@ use anyhow::Result;
 use log::info;
 
 pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
+    *app.copying_to_clipboard_mut() = false;
+
     match events.next()? {
         Event::Tick => {}
         Event::Key(key) => {
@@ -47,16 +49,19 @@ fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mu
     if let Some(SelectedInput::Filter) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
-                app.filter_input_text_mut().push(c);
-                app.filter_by_current_input(app.filter_input_text().clone());
+                app.filter_input_text_mut().add_char(c);
+                app.filter_by_current_input(app.filter_input_text().text().clone());
             }
             KeyCode::Backspace => {
                 if key_modifiers == KeyModifiers::CONTROL {
                     app.filter_input_text_mut().clear();
                 } else {
-                    app.filter_input_text_mut().pop();
+                    app.filter_input_text_mut().remove_char();
                 }
-                app.filter_by_current_input(app.filter_input_text().clone());
+                app.filter_by_current_input(app.filter_input_text().text().clone());
+            }
+            KeyCode::Delete => {
+                app.filter_input_text_mut().delete_char();
             }
             KeyCode::Enter => app.switch_to_item_view(),
 
@@ -64,8 +69,8 @@ fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mu
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
             KeyCode::Down => app.next(None),
             KeyCode::Up => app.previous(None),
-            KeyCode::Left => app.prev_tab(),
-            KeyCode::Right => app.next_tab(),
+            KeyCode::Left => app.filter_input_text_mut().cursor_left(),
+            KeyCode::Right => app.filter_input_text_mut().cursor_right(),
             KeyCode::PageDown => app.skipping_next(),
             KeyCode::PageUp => app.skipping_prev(),
             KeyCode::Home => app.start(),
@@ -79,7 +84,7 @@ fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mu
                 }
             }
             _ => {
-                app.filter_by_current_input(app.filter_input_text().clone());
+                app.filter_by_current_input(app.filter_input_text().text().clone());
             }
         }
     }
@@ -89,21 +94,24 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
     if let Some(SelectedInput::Search) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
-                app.search_input_text_mut().push(c);
+                app.search_input_text_mut().add_char(c);
             }
             KeyCode::Backspace => {
                 if key_modifiers == KeyModifiers::CONTROL {
                     app.search_input_text_mut().clear();
                 } else {
-                    app.search_input_text_mut().pop();
+                    app.search_input_text_mut().remove_char();
                 }
+            }
+            KeyCode::Delete => {
+                app.search_input_text_mut().delete_char();
             }
             // Arrow keys to select filtered items
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
-            KeyCode::Down => app.next(Some(app.search_input_text().clone())),
-            KeyCode::Up => app.previous(Some(app.search_input_text().clone())),
-            KeyCode::Left => app.prev_tab(),
-            KeyCode::Right => app.next_tab(),
+            KeyCode::Down => app.next(Some(app.search_input_text().text().clone())),
+            KeyCode::Up => app.previous(Some(app.search_input_text().text().clone())),
+            KeyCode::Left => app.search_input_text_mut().cursor_left(),
+            KeyCode::Right => app.search_input_text_mut().cursor_right(),
             KeyCode::PageDown => app.skipping_next(),
             KeyCode::PageUp => app.skipping_prev(),
             KeyCode::Home => app.start(),
@@ -147,8 +155,8 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
         KeyCode::End => app.end(),
         KeyCode::Enter => app.switch_to_item_view(),
         KeyCode::Char('o') => app.load_files(),
-        KeyCode::Right => app.next_tab(),
-        KeyCode::Left => app.prev_tab(),
+        KeyCode::Right | KeyCode::Char('l') => app.next_tab(),
+        KeyCode::Left | KeyCode::Char('h') => app.prev_tab(),
         KeyCode::Down | KeyCode::Char('j') => app.next(None),
         KeyCode::Up | KeyCode::Char('k') => app.previous(None),
         KeyCode::PageDown => app.skipping_next(),
@@ -171,6 +179,25 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
         }
         KeyCode::Char('t') => {
             app.set_tail_enabled(!app.tail_enabled());
+        }
+        KeyCode::Char('c') => {
+            // Currently only windows supported
+            if !cfg!(windows) {
+                return;
+            }
+
+            // temporary hack: remove pipe operators as escaping them doesn't work in CMD
+            let log_str = app
+                .selected_log_entry_in_text()
+                .replace('>', "")
+                .replace('<', "")
+                .replace('|', "");
+            std::process::Command::new("cmd")
+                .args(["/C", format!("echo {log_str} | clip.exe").as_str()])
+                .output()
+                .unwrap();
+            *app.copying_to_clipboard_mut() = true;
+            return;
         }
         _ => {}
     }

@@ -6,26 +6,48 @@ use ratatui::prelude::Text;
 use ratatui::style::Stylize;
 use serde_json::Value;
 
-pub fn highlight_keyword_in_text<'a>(text: &'a String, keyword: &'a String) -> Text<'a> {
-    let lines: Vec<Line> = text
-        .lines()
-        .map(|line| {
-            let mut line = Line::from(vec![Span::raw(line)]);
-            if let Some(bold_begin) = text.to_lowercase().find(&keyword.to_lowercase()) {
-                let bold_end = bold_begin + keyword.len();
-                let span1 = Span::raw(&text[0..bold_begin]);
-                let span2 = Span::styled(
-                    &text[bold_begin..bold_end],
-                    Style::new().add_modifier(Modifier::BOLD).on_light_magenta(),
-                );
-                let span3 = Span::raw(&text[bold_end..text.len()]);
-                line = Line::from(vec![span1, span2, span3]);
+pub fn highlight_keywords_in_text<'a>(text: &'a String, keywords: &'a String) -> Text<'a> {
+    let keywords = keywords
+        .split(',')
+        .map(|keyword| keyword.to_owned())
+        .collect::<Vec<String>>();
+
+    let mut keyword_positions_in_text = vec![];
+
+    {
+        let mut last_keyword_end_absolute = 0;
+        for keyword in keywords {
+            if keyword.is_empty() {
+                continue;
             }
 
-            line
-        })
-        .collect();
-    Text::from(lines)
+            if let Some(keyword_begin_relative) = text[last_keyword_end_absolute..]
+                .to_lowercase()
+                .find(&keyword.to_lowercase())
+            {
+                let keyword_begin_absolute = last_keyword_end_absolute + keyword_begin_relative;
+                last_keyword_end_absolute = keyword_begin_absolute + keyword.len();
+                keyword_positions_in_text.push((keyword_begin_absolute, last_keyword_end_absolute));
+            }
+        }
+    }
+
+    let mut text_spans = vec![];
+    let mut prev_span_end = 0;
+    for (keyword_start, keyword_end) in keyword_positions_in_text {
+        text_spans.push(Span::raw(&text[prev_span_end..keyword_start]));
+
+        text_spans.push(Span::styled(
+            &text[keyword_start..keyword_end],
+            Style::new().add_modifier(Modifier::BOLD).on_light_magenta(),
+        ));
+
+        prev_span_end = keyword_end;
+    }
+
+    text_spans.push(Span::raw(&text[prev_span_end..]));
+
+    Text::from(Line::from(text_spans))
 }
 
 pub fn beatify_enclosed_json(log: &str) -> Option<String> {

@@ -14,7 +14,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::utils::{beatify_enclosed_json, highlight_keyword_in_text};
+use crate::utils::{beatify_enclosed_json, highlight_keywords_in_text};
 
 pub fn render(f: &mut Frame, app: &mut App) {
     let is_in_table_item_mode = match app.view_mode().back() {
@@ -84,7 +84,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
             };
 
             if (menu[i].starts_with(TAIL_PREFIX) && (app.tail_enabled()))
-                || (menu[i].starts_with(FILTER_PREFIX) && (!app.filter_input_text().is_empty()))
+                || (menu[i].starts_with(FILTER_PREFIX)
+                    && (!app.filter_input_text().text().is_empty()))
                 || (menu[i].starts_with(SEARCH_PREFIX) && search_focused)
                 || (menu[i].starts_with(COPY_PREFIX) && app.copying_to_clipboard())
             {
@@ -146,7 +147,13 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .selected_item_index][LogEntryIndices::Log as usize]
             .clone()
     };
-    let preview = Paragraph::new(text).wrap(Wrap { trim: false }).block(
+
+    let preview = Paragraph::new(highlight_keywords_in_text(
+        &text,
+        app.search_input_text().text(),
+    ))
+    .wrap(Wrap { trim: false })
+    .block(
         Block::default()
             .borders(Borders::TOP | Borders::BOTTOM)
             .title(" [Preview] ")
@@ -163,21 +170,21 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     if let Some(SelectedInput::Filter) = &app.selected_input() {
         f.set_cursor(
-            filter_area.x + (app.filter_input_text().len() as u16) + 1,
+            filter_area.x + (app.filter_input_text().cursor_position() as u16) + 2,
             filter_area.y + 1,
         );
     } else if let Some(SelectedInput::Search) = &app.selected_input() {
         f.set_cursor(
-            search_area.x + (app.search_input_text().len() as u16) + 1,
+            search_area.x + (app.search_input_text().cursor_position() as u16) + 2,
             search_area.y + 1,
         );
     }
 
-    let filter = Paragraph::new(app.filter_input_text().clone())
+    let filter = Paragraph::new(app.filter_input_text().text().clone())
         .block(Block::default().borders(Borders::ALL).title("[F]ilter"));
     f.render_widget(filter, filter_area);
 
-    let search = Paragraph::new(app.search_input_text().clone())
+    let search = Paragraph::new(app.search_input_text().text().clone())
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
@@ -234,9 +241,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 } else {
                     LogEntryIndices::Date as usize
                 };
-            let cells = item[starting_cell..item.len()]
-                .iter()
-                .map(|c| Cell::from(highlight_keyword_in_text(&c, app.search_input_text())));
+            let cells = item[starting_cell..item.len()].iter().map(|c| {
+                Cell::from(highlight_keywords_in_text(
+                    &c,
+                    app.search_input_text().text(),
+                ))
+            });
             let row = Row::new(cells).height(height as u16);
             let color = match item[LogEntryIndices::Level as usize].as_str() {
                 "ERROR" => (Color::Red, Color::White),

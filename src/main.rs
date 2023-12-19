@@ -35,6 +35,7 @@ mod tab;
 mod file_monitor;
 use file_monitor::FileMonitor;
 
+mod input_element;
 mod utils;
 
 #[macro_use]

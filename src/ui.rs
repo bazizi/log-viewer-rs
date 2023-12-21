@@ -219,7 +219,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     f.render_widget(tabs, tabs_area);
 
     let selected_tab_index = app.selected_tab_index();
-    let (rows, num_items) = {
+    let rows = {
         let tabs = &app.tabs();
         let items = &tabs[selected_tab_index].filtered_view_items.data;
         if items.is_empty() {
@@ -234,7 +234,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .unwrap_or(0)
                 + 1;
 
-            // Show the file name only in the combined tab
+            // Show the file name column only in the combined tab
             let starting_cell =
                 if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
                     LogEntryIndices::FileName as usize
@@ -257,8 +257,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             row.style(Style::default().bg(color.0).fg(color.1))
         });
 
-        let num_rows = rows.len();
-        (rows, num_rows)
+        rows
     };
 
     let column_widts = if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
@@ -293,13 +292,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let scrollbar = Scrollbar::default()
         .orientation(ScrollbarOrientation::VerticalRight)
         .begin_symbol(Some("↑"))
-        .end_symbol(Some("↓"));
+        .end_symbol(Some("↓"))
+        .style(Style::default().fg(Color::White));
 
-    let mut scrollbar_state = ScrollbarState::new(num_items).position(
-        app.tabs()[app.selected_tab_index()]
-            .filtered_view_items
-            .selected_item_index,
-    );
+    let filtered_view_items = &app.tabs()[app.selected_tab_index()].filtered_view_items;
+    let mut scrollbar_state = ScrollbarState::new(filtered_view_items.data.len())
+        .position(filtered_view_items.selected_item_index);
 
     let mut state = app.state().clone();
     f.render_stateful_widget(t, table_area, &mut state);

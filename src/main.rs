@@ -74,7 +74,7 @@ fn run() -> Result<()> {
         io::stdout(),
         SetTitle(
             args.iter()
-                .map(|e| e.clone())
+                .cloned()
                 .reduce(|acc, e| { acc.to_string() + " " + &e })
                 .unwrap()
         )
@@ -84,8 +84,8 @@ fn run() -> Result<()> {
     let app = std::sync::Arc::new(std::sync::Mutex::new(App::new(
         args.iter()
             .skip(1)
-            .map(|item| item.clone())
             .filter(|item| !item.is_empty())
+            .cloned()
             .collect::<Vec<String>>(),
     )));
 

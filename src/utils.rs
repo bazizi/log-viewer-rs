@@ -6,7 +6,7 @@ use ratatui::prelude::Text;
 use ratatui::style::Stylize;
 use serde_json::Value;
 
-pub fn highlight_keywords_in_text<'a>(text: &'a String, keywords: &'a String) -> Text<'a> {
+pub fn highlight_keywords_in_text<'a>(text: &'a str, keywords: &'a str) -> Text<'a> {
     let keywords = keywords
         .split(',')
         .map(|keyword| keyword.to_owned())

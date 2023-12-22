@@ -189,15 +189,12 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
             // temporary hack: remove pipe operators as escaping them doesn't work in CMD
             let log_str = app
                 .selected_log_entry_in_text()
-                .replace('>', "")
-                .replace('<', "")
-                .replace('|', "");
+                .replace(['>', '<', '|'], "");
             std::process::Command::new("cmd")
                 .args(["/C", format!("echo {log_str} | clip.exe").as_str()])
                 .output()
                 .unwrap();
             *app.copying_to_clipboard_mut() = true;
-            return;
         }
         _ => {}
     }

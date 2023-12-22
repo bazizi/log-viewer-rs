@@ -17,10 +17,7 @@ use ratatui::{
 use crate::utils::{beatify_enclosed_json, highlight_keywords_in_text};
 
 pub fn render(f: &mut Frame, app: &mut App) {
-    let is_in_table_item_mode = match app.view_mode().back() {
-        Some(ViewMode::TableItem(_)) => true,
-        _ => false,
-    };
+    let is_in_table_item_mode = matches!(app.view_mode().back(), Some(ViewMode::TableItem(_)));
 
     let areas = Layout::default()
         .direction(Direction::Vertical)
@@ -77,11 +74,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .block(Block::default().borders(Borders::ALL))
                 .alignment(ratatui::layout::Alignment::Center);
 
-            let search_focused = if let Some(SelectedInput::Search) = app.selected_input() {
-                true
-            } else {
-                false
-            };
+            let search_focused = matches!(app.selected_input(), Some(SelectedInput::Search));
 
             if (menu[i].starts_with(TAIL_PREFIX) && (app.tail_enabled()))
                 || (menu[i].starts_with(FILTER_PREFIX)
@@ -135,8 +128,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let text = if app.tabs()[app.selected_tab_index()]
         .filtered_view_items
         .data
-        .len()
-        == 0
+        .is_empty()
     {
         "".to_owned()
     } else {
@@ -243,7 +235,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 };
             let cells = item[starting_cell..item.len()].iter().map(|c| {
                 Cell::from(highlight_keywords_in_text(
-                    &c,
+                    c,
                     app.search_input_text().text(),
                 ))
             });

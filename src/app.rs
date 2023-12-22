@@ -61,7 +61,7 @@ impl App {
                 .iter()
                 .map(|file_path| {
                     let table_items = TableItems {
-                        data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
+                        data: parser::parse_log_by_path(file_path).unwrap_or_default(),
                         selected_item_index: 0,
                     };
                     Tab::new(file_path.to_owned(), table_items, TabType::Normal)
@@ -89,63 +89,63 @@ impl App {
     }
 
     pub fn state(&self) -> &TableState {
-        return &self.state;
+        &self.state
     }
 
     pub fn state_mut(&mut self) -> &mut TableState {
-        return &mut self.state;
+        &mut self.state
     }
 
     pub fn copying_to_clipboard(&mut self) -> bool {
-        return self.copying_to_clipboard;
+        self.copying_to_clipboard
     }
 
     pub fn copying_to_clipboard_mut(&mut self) -> &mut bool {
-        return &mut self.copying_to_clipboard;
+        &mut self.copying_to_clipboard
     }
 
     pub fn tabs(&self) -> &Vec<Tab> {
-        return &self.tabs;
+        &self.tabs
     }
 
     pub fn tabs_mut(&mut self) -> &mut Vec<Tab> {
-        return &mut self.tabs;
+        &mut self.tabs
     }
 
     pub fn running(&self) -> &bool {
-        return &self.running;
+        &self.running
     }
 
     pub fn running_mut(&mut self) -> &mut bool {
-        return &mut self.running;
+        &mut self.running
     }
 
     pub fn selected_tab_index(&self) -> usize {
-        return self.selected_tab_index;
+        self.selected_tab_index
     }
 
     pub fn selected_tab_index_mut(&mut self) -> &mut usize {
-        return &mut self.selected_tab_index;
+        &mut self.selected_tab_index
     }
 
     pub fn selected_input(&self) -> &Option<SelectedInput> {
-        return &self.selected_input;
+        &self.selected_input
     }
 
     pub fn selected_input_mut(&mut self) -> &mut Option<SelectedInput> {
-        return &mut self.selected_input;
+        &mut self.selected_input
     }
 
     pub fn view_mode(&self) -> &VecDeque<ViewMode> {
-        return &self.view_mode;
+        &self.view_mode
     }
 
     pub fn view_mode_mut(&mut self) -> &mut VecDeque<ViewMode> {
-        return &mut self.view_mode;
+        &mut self.view_mode
     }
 
     pub fn tail_enabled(&self) -> bool {
-        return self.tail_enabled;
+        self.tail_enabled
     }
 
     pub fn set_tail_enabled(&mut self, tail_enabled: bool) {
@@ -156,17 +156,17 @@ impl App {
         let tabs = &mut self.tabs;
 
         let mut all_tab_items = vec![];
-        for i in 0..tabs.len() {
-            if let TabType::Combined = tabs[i].tab_type {
+        for tab in tabs.iter() {
+            if matches!(tab.tab_type, TabType::Combined) {
                 continue;
             }
 
-            let mut current_tab_items = tabs[i].filtered_view_items.data.clone();
+            let mut current_tab_items = tab.filtered_view_items.data.clone();
             all_tab_items.append(&mut current_tab_items);
         }
 
         all_tab_items.sort_by(|a, b| {
-            return a[LogEntryIndices::Date as usize].cmp(&b[LogEntryIndices::Date as usize]);
+            a[LogEntryIndices::Date as usize].cmp(&b[LogEntryIndices::Date as usize])
         });
 
         tabs[COMBINED_TAB_INDEX].filtered_view_items.data = all_tab_items;
@@ -451,15 +451,12 @@ impl App {
             return;
         }
 
-        match self.view_mode.back() {
-            Some(ViewMode::Table) => {
-                self.view_mode.push_back(ViewMode::TableItem(
-                    self.tabs[self.selected_tab_index]
-                        .filtered_view_items
-                        .selected_item_index,
-                ));
-            }
-            _ => {}
+        if matches!(self.view_mode.back(), Some(ViewMode::Table)) {
+            self.view_mode.push_back(ViewMode::TableItem(
+                self.tabs[self.selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index,
+            ));
         }
     }
 
@@ -472,7 +469,7 @@ impl App {
             for file in files {
                 let file_path = file.to_str().unwrap().to_string();
                 let table_items = TableItems {
-                    data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
+                    data: parser::parse_log_by_path(&file_path).unwrap_or_default(),
                     selected_item_index: 0,
                 };
                 self.tabs
@@ -535,7 +532,7 @@ impl App {
 
                     include_item
                 })
-                .map(|item| item.clone())
+                .cloned()
                 .collect::<Vec<Vec<String>>>();
 
             tab.filtered_view_items.selected_item_index = if self.tail_enabled {

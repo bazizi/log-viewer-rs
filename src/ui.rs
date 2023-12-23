@@ -17,10 +17,7 @@ use ratatui::{
 use crate::utils::{beatify_enclosed_json, highlight_keywords_in_text};
 
 pub fn render(f: &mut Frame, app: &mut App) {
-    let is_in_table_item_mode = match app.view_mode().back() {
-        Some(ViewMode::TableItem(_)) => true,
-        _ => false,
-    };
+    let is_in_table_item_mode = matches!(app.view_mode().back(), Some(ViewMode::TableItem(_)));
 
     let areas = Layout::default()
         .direction(Direction::Vertical)
@@ -77,11 +74,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .block(Block::default().borders(Borders::ALL))
                 .alignment(ratatui::layout::Alignment::Center);
 
-            let search_focused = if let Some(SelectedInput::Search) = app.selected_input() {
-                true
-            } else {
-                false
-            };
+            let search_focused = matches!(app.selected_input(), Some(SelectedInput::Search));
 
             if (menu[i].starts_with(TAIL_PREFIX) && (app.tail_enabled()))
                 || (menu[i].starts_with(FILTER_PREFIX)
@@ -131,12 +124,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
     }
 
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
+    *app.table_view_state_mut().position_mut() = Some((table_area.left(), table_area.top()));
 
     let text = if app.tabs()[app.selected_tab_index()]
         .filtered_view_items
         .data
-        .len()
-        == 0
+        .is_empty()
     {
         "".to_owned()
     } else {
@@ -219,7 +212,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     f.render_widget(tabs, tabs_area);
 
     let selected_tab_index = app.selected_tab_index();
-    let (rows, num_items) = {
+    let rows = {
         let tabs = &app.tabs();
         let items = &tabs[selected_tab_index].filtered_view_items.data;
         if items.is_empty() {
@@ -234,7 +227,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 .unwrap_or(0)
                 + 1;
 
-            // Show the file name only in the combined tab
+            // Show the file name column only in the combined tab
             let starting_cell =
                 if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
                     LogEntryIndices::FileName as usize
@@ -243,7 +236,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 };
             let cells = item[starting_cell..item.len()].iter().map(|c| {
                 Cell::from(highlight_keywords_in_text(
-                    &c,
+                    c,
                     app.search_input_text().text(),
                 ))
             });
@@ -257,8 +250,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             row.style(Style::default().bg(color.0).fg(color.1))
         });
 
-        let num_rows = rows.len();
-        (rows, num_rows)
+        rows
     };
 
     let column_widts = if let TabType::Combined = app.tabs()[app.selected_tab_index()].tab_type {
@@ -293,15 +285,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let scrollbar = Scrollbar::default()
         .orientation(ScrollbarOrientation::VerticalRight)
         .begin_symbol(Some("↑"))
-        .end_symbol(Some("↓"));
+        .end_symbol(Some("↓"))
+        .style(Style::default().fg(Color::White));
 
-    let mut scrollbar_state = ScrollbarState::new(num_items).position(
-        app.tabs()[app.selected_tab_index()]
-            .filtered_view_items
-            .selected_item_index,
-    );
+    let filtered_view_items = &app.tabs()[app.selected_tab_index()].filtered_view_items;
+    let mut scrollbar_state = ScrollbarState::new(filtered_view_items.data.len())
+        .position(filtered_view_items.selected_item_index);
 
-    let mut state = app.state().clone();
+    let mut state = app.table_view_state().state().clone();
     f.render_stateful_widget(t, table_area, &mut state);
     f.render_stateful_widget(
         scrollbar,
@@ -312,5 +303,5 @@ pub fn render(f: &mut Frame, app: &mut App) {
         &mut scrollbar_state,
     );
 
-    *app.state_mut() = state;
+    *app.table_view_state_mut().state_mut() = state;
 }

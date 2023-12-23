@@ -1,25 +1,44 @@
+use std::sync::{Arc, Mutex};
+
 use crate::{app::SelectedInput, event::EventHandler, tab::TabType, App, ViewMode};
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind};
 
 use crate::event::Event;
 use anyhow::Result;
 
 use log::info;
 
-pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
-    *app.copying_to_clipboard_mut() = false;
+pub fn update(events: &EventHandler, app: Arc<Mutex<App>>) -> Result<()> {
+    *app.lock().unwrap().copying_to_clipboard_mut() = false;
 
     match events.next()? {
+        // To avoid deadlock, the app mutex must be locked after the event is read
+        // This is so that we can process events from the file monitor (which also locks the mutex)
         Event::Tick => {}
         Event::Key(key) => {
-            handle_key_press(key, app);
+            let mut app = app.lock().unwrap();
+            handle_key_press(key, &mut app);
         }
         Event::Mouse(mouse_event) => {
-            if mouse_event.kind == crossterm::event::MouseEventKind::ScrollUp {
+            let mut app = app.lock().unwrap();
+            if mouse_event.kind == MouseEventKind::ScrollUp {
                 app.previous(None);
-            } else if mouse_event.kind == crossterm::event::MouseEventKind::ScrollDown {
+            } else if mouse_event.kind == MouseEventKind::ScrollDown {
                 app.next(None);
+            } else if let MouseEventKind::Down(mouse_button) = mouse_event.kind {
+                match mouse_button {
+                    MouseButton::Left => {
+                        *app.mouse_position_mut() = (mouse_event.column, mouse_event.row);
+                        app.handle_table_mouse_click();
+                    }
+                    MouseButton::Right => {
+                        if app.view_mode().len() > 1 {
+                            app.view_mode_mut().pop_back();
+                        }
+                    }
+                    _ => {}
+                }
             }
         }
         Event::Resize(_, _) => {}
@@ -189,15 +208,12 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
             // temporary hack: remove pipe operators as escaping them doesn't work in CMD
             let log_str = app
                 .selected_log_entry_in_text()
-                .replace('>', "")
-                .replace('<', "")
-                .replace('|', "");
+                .replace(['>', '<', '|'], "");
             std::process::Command::new("cmd")
                 .args(["/C", format!("echo {log_str} | clip.exe").as_str()])
                 .output()
                 .unwrap();
             *app.copying_to_clipboard_mut() = true;
-            return;
         }
         _ => {}
     }

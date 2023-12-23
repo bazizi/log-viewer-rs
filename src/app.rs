@@ -28,9 +28,32 @@ pub enum ViewMode {
     TableItem(usize /* index */),
 }
 
+pub struct TableViewState {
+    state: TableState,
+    position: Option<(u16, u16)>,
+}
+
+impl TableViewState {
+    pub fn state(&self) -> &TableState {
+        &self.state
+    }
+
+    pub fn state_mut(&mut self) -> &mut TableState {
+        &mut self.state
+    }
+
+    pub fn position(&self) -> &Option<(u16, u16)> {
+        &self.position
+    }
+
+    pub fn position_mut(&mut self) -> &mut Option<(u16, u16)> {
+        &mut self.position
+    }
+}
+
 pub struct App {
     running: bool,
-    state: TableState,
+    table_view_state: TableViewState,
 
     // we keep a history of view modes to be able to switch back
     tabs: Vec<Tab>,
@@ -42,6 +65,7 @@ pub struct App {
     view_buffer_size: usize,
     tail_enabled: bool,
     copying_to_clipboard: bool,
+    mouse_position: (u16, u16),
 }
 
 impl App {
@@ -61,7 +85,7 @@ impl App {
                 .iter()
                 .map(|file_path| {
                     let table_items = TableItems {
-                        data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
+                        data: parser::parse_log_by_path(file_path).unwrap_or_default(),
                         selected_item_index: 0,
                     };
                     Tab::new(file_path.to_owned(), table_items, TabType::Normal)
@@ -71,7 +95,10 @@ impl App {
 
         let mut app = App {
             running: true,
-            state: TableState::default(),
+            table_view_state: TableViewState {
+                state: TableState::default(),
+                position: None,
+            },
             view_mode: vec![ViewMode::Table].into(),
             tabs,
             selected_tab_index: 0,
@@ -81,6 +108,7 @@ impl App {
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
             copying_to_clipboard: false,
+            mouse_position: (0, 0),
         };
 
         app.reload_combined_tab();
@@ -88,64 +116,56 @@ impl App {
         app
     }
 
-    pub fn state(&self) -> &TableState {
-        return &self.state;
-    }
-
-    pub fn state_mut(&mut self) -> &mut TableState {
-        return &mut self.state;
-    }
-
     pub fn copying_to_clipboard(&mut self) -> bool {
-        return self.copying_to_clipboard;
+        self.copying_to_clipboard
     }
 
     pub fn copying_to_clipboard_mut(&mut self) -> &mut bool {
-        return &mut self.copying_to_clipboard;
+        &mut self.copying_to_clipboard
     }
 
     pub fn tabs(&self) -> &Vec<Tab> {
-        return &self.tabs;
+        &self.tabs
     }
 
     pub fn tabs_mut(&mut self) -> &mut Vec<Tab> {
-        return &mut self.tabs;
+        &mut self.tabs
     }
 
     pub fn running(&self) -> &bool {
-        return &self.running;
+        &self.running
     }
 
     pub fn running_mut(&mut self) -> &mut bool {
-        return &mut self.running;
+        &mut self.running
     }
 
     pub fn selected_tab_index(&self) -> usize {
-        return self.selected_tab_index;
+        self.selected_tab_index
     }
 
     pub fn selected_tab_index_mut(&mut self) -> &mut usize {
-        return &mut self.selected_tab_index;
+        &mut self.selected_tab_index
     }
 
     pub fn selected_input(&self) -> &Option<SelectedInput> {
-        return &self.selected_input;
+        &self.selected_input
     }
 
     pub fn selected_input_mut(&mut self) -> &mut Option<SelectedInput> {
-        return &mut self.selected_input;
+        &mut self.selected_input
     }
 
     pub fn view_mode(&self) -> &VecDeque<ViewMode> {
-        return &self.view_mode;
+        &self.view_mode
     }
 
     pub fn view_mode_mut(&mut self) -> &mut VecDeque<ViewMode> {
-        return &mut self.view_mode;
+        &mut self.view_mode
     }
 
     pub fn tail_enabled(&self) -> bool {
-        return self.tail_enabled;
+        self.tail_enabled
     }
 
     pub fn set_tail_enabled(&mut self, tail_enabled: bool) {
@@ -156,17 +176,17 @@ impl App {
         let tabs = &mut self.tabs;
 
         let mut all_tab_items = vec![];
-        for i in 0..tabs.len() {
-            if let TabType::Combined = tabs[i].tab_type {
+        for tab in tabs.iter() {
+            if matches!(tab.tab_type, TabType::Combined) {
                 continue;
             }
 
-            let mut current_tab_items = tabs[i].filtered_view_items.data.clone();
+            let mut current_tab_items = tab.filtered_view_items.data.clone();
             all_tab_items.append(&mut current_tab_items);
         }
 
         all_tab_items.sort_by(|a, b| {
-            return a[LogEntryIndices::Date as usize].cmp(&b[LogEntryIndices::Date as usize]);
+            a[LogEntryIndices::Date as usize].cmp(&b[LogEntryIndices::Date as usize])
         });
 
         tabs[COMBINED_TAB_INDEX].filtered_view_items.data = all_tab_items;
@@ -196,19 +216,10 @@ impl App {
             .len();
 
         // gets the view range based on the view_buffer_size
-        std::cmp::max(
-            items
-                .selected_item_index
-                .saturating_sub(self.view_buffer_size / 2),
-            0,
-        )
-            ..std::cmp::min(
-                items
-                    .selected_item_index
-                    .saturating_add(3 * self.view_buffer_size / 2)
-                    + 1,
-                num_items,
-            )
+        let chunk_multiplier = items.selected_item_index / self.view_buffer_size;
+
+        chunk_multiplier * self.view_buffer_size
+            ..std::cmp::min(num_items, (chunk_multiplier + 1) * self.view_buffer_size)
     }
 
     fn calculate_position_in_view_buffer(&self) -> usize {
@@ -286,7 +297,8 @@ impl App {
 
         items.selected_item_index = new_index;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -342,7 +354,8 @@ impl App {
 
         items.selected_item_index = new_index;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -367,7 +380,8 @@ impl App {
             *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
         }
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -388,7 +402,8 @@ impl App {
             *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
         }
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -406,7 +421,8 @@ impl App {
             .filtered_view_items
             .selected_item_index = 0;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -428,7 +444,8 @@ impl App {
             .len()
             - 1;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -451,15 +468,12 @@ impl App {
             return;
         }
 
-        match self.view_mode.back() {
-            Some(ViewMode::Table) => {
-                self.view_mode.push_back(ViewMode::TableItem(
-                    self.tabs[self.selected_tab_index]
-                        .filtered_view_items
-                        .selected_item_index,
-                ));
-            }
-            _ => {}
+        if matches!(self.view_mode.back(), Some(ViewMode::Table)) {
+            self.view_mode.push_back(ViewMode::TableItem(
+                self.tabs[self.selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index,
+            ));
         }
     }
 
@@ -472,7 +486,7 @@ impl App {
             for file in files {
                 let file_path = file.to_str().unwrap().to_string();
                 let table_items = TableItems {
-                    data: parser::parse_log_by_path(&file_path).unwrap_or(vec![]),
+                    data: parser::parse_log_by_path(&file_path).unwrap_or_default(),
                     selected_item_index: 0,
                 };
                 self.tabs
@@ -492,7 +506,8 @@ impl App {
             self.selected_tab_index.saturating_add(1),
             self.tabs.len() - 1,
         );
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -502,7 +517,8 @@ impl App {
         }
 
         self.selected_tab_index = self.selected_tab_index.saturating_sub(1);
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -535,7 +551,7 @@ impl App {
 
                     include_item
                 })
-                .map(|item| item.clone())
+                .cloned()
                 .collect::<Vec<Vec<String>>>();
 
             tab.filtered_view_items.selected_item_index = if self.tail_enabled {
@@ -571,5 +587,65 @@ impl App {
 
     pub fn search_input_text_mut(&mut self) -> &mut InputTextElement {
         &mut self.search_input_text
+    }
+
+    pub fn mouse_position_mut(&mut self) -> &mut (u16, u16) {
+        &mut self.mouse_position
+    }
+
+    pub fn mouse_position(&self) -> (u16, u16) {
+        self.mouse_position
+    }
+
+    pub fn table_view_state_mut(&mut self) -> &mut TableViewState {
+        &mut self.table_view_state
+    }
+
+    pub fn table_view_state(&self) -> &TableViewState {
+        &self.table_view_state
+    }
+
+    pub fn handle_table_mouse_click(&mut self) {
+        if let Some((_, table_position_top)) = *self.table_view_state().position() {
+            let mouse_position_top = self.mouse_position().1;
+            let table_position_first_row = table_position_top + 2;
+
+            if mouse_position_top < table_position_first_row {
+                // mouse click is outside the table
+                return;
+            }
+
+            let offset_of_first_row_in_view = self.table_view_state().state().offset() as u16;
+            self.table_view_state.state.select(Some(
+                (mouse_position_top - table_position_first_row + offset_of_first_row_in_view)
+                    .into(),
+            ));
+
+            let view_buffer_start = self.get_view_buffer_range().start;
+            let selected_tab_index = self.selected_tab_index;
+            let table_state = &self.table_view_state;
+            let mouse_position_top = self.mouse_position.1;
+
+            let item_to_select = view_buffer_start
+                + table_state.state().offset()
+                + ((mouse_position_top - table_position_top - 2) as usize);
+
+            if item_to_select
+                == self.tabs_mut()[selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index
+            {
+                self.switch_to_item_view();
+            } else if item_to_select
+                < self.tabs()[selected_tab_index]
+                    .filtered_view_items
+                    .data
+                    .len()
+            {
+                self.tabs_mut()[selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index = item_to_select;
+            }
+        }
     }
 }

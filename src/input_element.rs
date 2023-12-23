@@ -7,7 +7,7 @@ impl InputTextElement {
     pub fn new(text: String) -> Self {
         Self {
             cursor_position: text.len() as i64 - 1,
-            text: text,
+            text,
         }
     }
 

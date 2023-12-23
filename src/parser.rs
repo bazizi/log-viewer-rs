@@ -9,7 +9,7 @@ pub type LogEntry = Vec<String>;
 
 lazy_static! {
 static ref REGEX : Regex  = Regex::new(
-        r#"^\s+(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
+        r#"^\s*(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
     ).unwrap();
 }
 
@@ -44,7 +44,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
             continue;
         }
 
-        let mut captures = REGEX.captures_iter(&line);
+        let mut captures = REGEX.captures_iter(line);
 
         let cap;
         if let Some(tmp) = captures.next() {
@@ -78,7 +78,7 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
 
             line_num += 1;
             let next_line = lines[line_num];
-            let mut cap = REGEX.captures_iter(&next_line);
+            let mut cap = REGEX.captures_iter(next_line);
             if cap.next().is_none() {
                 log += next_line;
                 continue;
@@ -113,5 +113,5 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         log_path
     );
 
-    return Ok(log_entries);
+    Ok(log_entries)
 }

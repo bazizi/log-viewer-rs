@@ -28,9 +28,32 @@ pub enum ViewMode {
     TableItem(usize /* index */),
 }
 
+pub struct TableViewState {
+    state: TableState,
+    position: Option<(u16, u16)>,
+}
+
+impl TableViewState {
+    pub fn state(&self) -> &TableState {
+        &self.state
+    }
+
+    pub fn state_mut(&mut self) -> &mut TableState {
+        &mut self.state
+    }
+
+    pub fn position(&self) -> &Option<(u16, u16)> {
+        &self.position
+    }
+
+    pub fn position_mut(&mut self) -> &mut Option<(u16, u16)> {
+        &mut self.position
+    }
+}
+
 pub struct App {
     running: bool,
-    state: TableState,
+    table_view_state: TableViewState,
 
     // we keep a history of view modes to be able to switch back
     tabs: Vec<Tab>,
@@ -42,6 +65,7 @@ pub struct App {
     view_buffer_size: usize,
     tail_enabled: bool,
     copying_to_clipboard: bool,
+    mouse_position: (u16, u16),
 }
 
 impl App {
@@ -71,7 +95,10 @@ impl App {
 
         let mut app = App {
             running: true,
-            state: TableState::default(),
+            table_view_state: TableViewState {
+                state: TableState::default(),
+                position: None,
+            },
             view_mode: vec![ViewMode::Table].into(),
             tabs,
             selected_tab_index: 0,
@@ -81,19 +108,12 @@ impl App {
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
             copying_to_clipboard: false,
+            mouse_position: (0, 0),
         };
 
         app.reload_combined_tab();
 
         app
-    }
-
-    pub fn state(&self) -> &TableState {
-        &self.state
-    }
-
-    pub fn state_mut(&mut self) -> &mut TableState {
-        &mut self.state
     }
 
     pub fn copying_to_clipboard(&mut self) -> bool {
@@ -196,19 +216,10 @@ impl App {
             .len();
 
         // gets the view range based on the view_buffer_size
-        std::cmp::max(
-            items
-                .selected_item_index
-                .saturating_sub(self.view_buffer_size / 2),
-            0,
-        )
-            ..std::cmp::min(
-                items
-                    .selected_item_index
-                    .saturating_add(3 * self.view_buffer_size / 2)
-                    + 1,
-                num_items,
-            )
+        let chunk_multiplier = items.selected_item_index / self.view_buffer_size;
+
+        chunk_multiplier * self.view_buffer_size
+            ..std::cmp::min(num_items, (chunk_multiplier + 1) * self.view_buffer_size)
     }
 
     fn calculate_position_in_view_buffer(&self) -> usize {
@@ -286,7 +297,8 @@ impl App {
 
         items.selected_item_index = new_index;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -342,7 +354,8 @@ impl App {
 
         items.selected_item_index = new_index;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -367,7 +380,8 @@ impl App {
             *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
         }
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -388,7 +402,8 @@ impl App {
             *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
         }
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -406,7 +421,8 @@ impl App {
             .filtered_view_items
             .selected_item_index = 0;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -428,7 +444,8 @@ impl App {
             .len()
             - 1;
 
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -489,7 +506,8 @@ impl App {
             self.selected_tab_index.saturating_add(1),
             self.tabs.len() - 1,
         );
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -499,7 +517,8 @@ impl App {
         }
 
         self.selected_tab_index = self.selected_tab_index.saturating_sub(1);
-        self.state
+        self.table_view_state
+            .state
             .select(Some(self.calculate_position_in_view_buffer()));
     }
 
@@ -568,5 +587,65 @@ impl App {
 
     pub fn search_input_text_mut(&mut self) -> &mut InputTextElement {
         &mut self.search_input_text
+    }
+
+    pub fn mouse_position_mut(&mut self) -> &mut (u16, u16) {
+        &mut self.mouse_position
+    }
+
+    pub fn mouse_position(&self) -> (u16, u16) {
+        self.mouse_position
+    }
+
+    pub fn table_view_state_mut(&mut self) -> &mut TableViewState {
+        &mut self.table_view_state
+    }
+
+    pub fn table_view_state(&self) -> &TableViewState {
+        &self.table_view_state
+    }
+
+    pub fn handle_table_mouse_click(&mut self) {
+        if let Some((_, table_position_top)) = *self.table_view_state().position() {
+            let mouse_position_top = self.mouse_position().1;
+            let table_position_first_row = table_position_top + 2;
+
+            if mouse_position_top < table_position_first_row {
+                // mouse click is outside the table
+                return;
+            }
+
+            let offset_of_first_row_in_view = self.table_view_state().state().offset() as u16;
+            self.table_view_state.state.select(Some(
+                (mouse_position_top - table_position_first_row + offset_of_first_row_in_view)
+                    .into(),
+            ));
+
+            let view_buffer_start = self.get_view_buffer_range().start;
+            let selected_tab_index = self.selected_tab_index;
+            let table_state = &self.table_view_state;
+            let mouse_position_top = self.mouse_position.1;
+
+            let item_to_select = view_buffer_start
+                + table_state.state().offset()
+                + ((mouse_position_top - table_position_top - 2) as usize);
+
+            if item_to_select
+                == self.tabs_mut()[selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index
+            {
+                self.switch_to_item_view();
+            } else if item_to_select
+                < self.tabs()[selected_tab_index]
+                    .filtered_view_items
+                    .data
+                    .len()
+            {
+                self.tabs_mut()[selected_tab_index]
+                    .filtered_view_items
+                    .selected_item_index = item_to_select;
+            }
+        }
     }
 }

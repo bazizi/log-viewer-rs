@@ -216,9 +216,10 @@ impl App {
             .len();
 
         // gets the view range based on the view_buffer_size
-        let chunk_multiplier = items.selected_item_index % self.view_buffer_size;
-        std::cmp::min(0, chunk_multiplier * self.view_buffer_size)
-            ..std::cmp::max(num_items, (chunk_multiplier + 1) * self.view_buffer_size)
+        let chunk_multiplier = items.selected_item_index / self.view_buffer_size;
+
+        chunk_multiplier * self.view_buffer_size
+            ..std::cmp::min(num_items, (chunk_multiplier + 1) * self.view_buffer_size)
     }
 
     fn calculate_position_in_view_buffer(&self) -> usize {

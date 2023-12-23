@@ -91,14 +91,17 @@ fn run() -> Result<()> {
             .collect::<Vec<String>>(),
     )));
 
-    let _file_monitor_thread = FileMonitor::new(Arc::clone(&app));
-    let events = EventHandler::new();
+    let file_monitor_thread = FileMonitor::new(Arc::clone(&app));
+    let events_thread = EventHandler::new();
 
     while *app.lock().unwrap().running() {
-        update(&events, &mut app.lock().unwrap())?;
+        update(&events_thread, &mut app.lock().unwrap())?;
         terminal.draw(|f| render(f, &mut app.lock().unwrap()))?;
         std::thread::sleep(std::time::Duration::from_millis(1000 / FPS));
     }
+
+    events_thread.join();
+    file_monitor_thread.join();
 
     Ok(())
 }

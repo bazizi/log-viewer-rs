@@ -7,11 +7,14 @@ use crate::parser::parse_log_by_path;
 use crate::tab::{TabType, TableItems};
 
 pub struct FileMonitor {
-    _handler: thread::JoinHandle<()>,
+    handler: thread::JoinHandle<()>,
+    running: Arc<Mutex<bool>>,
 }
 
 impl FileMonitor {
     pub fn new(app: Arc<Mutex<App>>) -> Self {
+        let running = Arc::new(Mutex::new(true));
+        let running2 = running.clone();
         let handler = thread::spawn(move || loop {
             // this code attempts to minimize the duration the App mutex is locked
             std::thread::sleep(std::time::Duration::from_secs(1));
@@ -83,8 +86,17 @@ impl FileMonitor {
                 app.filter_by_current_input(filter_text);
                 app.reload_combined_tab();
             }
+
+            if *running2.lock().unwrap() {
+                break;
+            }
         });
 
-        FileMonitor { _handler: handler }
+        FileMonitor { handler, running }
+    }
+
+    pub fn join(self) {
+        *self.running.lock().unwrap() = false;
+        self.handler.join().unwrap();
     }
 }

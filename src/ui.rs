@@ -124,6 +124,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     }
 
     let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
+    *app.table_view_state_mut().position_mut() = Some((table_area.left(), table_area.top()));
 
     let text = if app.tabs()[app.selected_tab_index()]
         .filtered_view_items
@@ -291,7 +292,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let mut scrollbar_state = ScrollbarState::new(filtered_view_items.data.len())
         .position(filtered_view_items.selected_item_index);
 
-    let mut state = app.state().clone();
+    let mut state = app.table_view_state().state().clone();
     f.render_stateful_widget(t, table_area, &mut state);
     f.render_stateful_widget(
         scrollbar,
@@ -302,5 +303,5 @@ pub fn render(f: &mut Frame, app: &mut App) {
         &mut scrollbar_state,
     );
 
-    *app.state_mut() = state;
+    *app.table_view_state_mut().state_mut() = state;
 }

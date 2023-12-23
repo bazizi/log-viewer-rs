@@ -14,10 +14,7 @@ impl FileMonitor {
     pub fn new(app: Arc<Mutex<App>>) -> Self {
         let handler = thread::spawn(move || loop {
             // this code attempts to minimize the duration the App mutex is locked
-            if !app.lock().unwrap().tail_enabled() {
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                continue;
-            }
+            std::thread::sleep(std::time::Duration::from_secs(1));
 
             let file_paths_and_sizes = {
                 let app = app.lock().unwrap();

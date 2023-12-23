@@ -1,6 +1,6 @@
 use crate::{app::SelectedInput, event::EventHandler, tab::TabType, App, ViewMode};
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind};
 
 use crate::event::Event;
 use anyhow::Result;
@@ -16,10 +16,23 @@ pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
             handle_key_press(key, app);
         }
         Event::Mouse(mouse_event) => {
-            if mouse_event.kind == crossterm::event::MouseEventKind::ScrollUp {
+            if mouse_event.kind == MouseEventKind::ScrollUp {
                 app.previous(None);
-            } else if mouse_event.kind == crossterm::event::MouseEventKind::ScrollDown {
+            } else if mouse_event.kind == MouseEventKind::ScrollDown {
                 app.next(None);
+            } else if let MouseEventKind::Down(mouse_button) = mouse_event.kind {
+                match mouse_button {
+                    MouseButton::Left => {
+                        *app.mouse_position_mut() = (mouse_event.column, mouse_event.row);
+                        app.handle_table_mouse_click();
+                    }
+                    MouseButton::Right => {
+                        if app.view_mode().len() > 1 {
+                            app.view_mode_mut().pop_back();
+                        }
+                    }
+                    _ => {}
+                }
             }
         }
         Event::Resize(_, _) => {}

@@ -38,6 +38,8 @@ use file_monitor::FileMonitor;
 mod input_element;
 mod utils;
 
+const FPS: u64 = 60;
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -90,11 +92,12 @@ fn run() -> Result<()> {
     )));
 
     let _file_monitor_thread = FileMonitor::new(Arc::clone(&app));
-    let events = EventHandler::new(250);
+    let events = EventHandler::new();
 
     while *app.lock().unwrap().running() {
-        terminal.draw(|f| render(f, &mut app.lock().unwrap()))?;
         update(&events, &mut app.lock().unwrap())?;
+        terminal.draw(|f| render(f, &mut app.lock().unwrap()))?;
+        std::thread::sleep(std::time::Duration::from_millis(1000 / FPS));
     }
 
     Ok(())

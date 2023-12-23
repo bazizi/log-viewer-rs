@@ -1,8 +1,9 @@
 use std::thread;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 
 use crate::app::App;
+use crate::event::Event;
 use crate::parser::parse_log_by_path;
 use crate::tab::{TabType, TableItems};
 
@@ -12,12 +13,20 @@ pub struct FileMonitor {
 }
 
 impl FileMonitor {
-    pub fn new(app: Arc<Mutex<App>>) -> Self {
+    pub fn new(app: Arc<Mutex<App>>, sender: mpsc::Sender<Event>) -> Self {
         let running = Arc::new(Mutex::new(true));
         let running2 = running.clone();
         let handler = thread::spawn(move || loop {
-            // this code attempts to minimize the duration the App mutex is locked
+            if !*running2.lock().unwrap() {
+                break;
+            }
+
             std::thread::sleep(std::time::Duration::from_secs(1));
+
+            // this code attempts to minimize the duration the App mutex is locked
+            if !app.lock().unwrap().tail_enabled() {
+                continue;
+            }
 
             let file_paths_and_sizes = {
                 let app = app.lock().unwrap();
@@ -85,10 +94,7 @@ impl FileMonitor {
                 let mut app = app.lock().unwrap();
                 app.filter_by_current_input(filter_text);
                 app.reload_combined_tab();
-            }
-
-            if *running2.lock().unwrap() {
-                break;
+                sender.send(Event::Tick).unwrap();
             }
         });
 

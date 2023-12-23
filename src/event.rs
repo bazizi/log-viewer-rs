@@ -24,7 +24,7 @@ pub enum Event {
 #[derive(Debug)]
 pub struct EventHandler {
     /// Event sender channel.
-    sender: mpsc::Sender<Event>,
+    pub sender: mpsc::Sender<Event>,
     /// Event receiver channel.
     receiver: mpsc::Receiver<Event>,
     /// Event handler thread.
@@ -41,6 +41,10 @@ impl EventHandler {
             let sender = sender.clone();
             let running2 = Arc::clone(&running);
             thread::spawn(move || loop {
+                if !*running2.lock().unwrap() {
+                    break;
+                }
+
                 if event::poll(std::time::Duration::from_secs(1)).expect("no events available") {
                     match event::read().expect("unable to read event") {
                         CrosstermEvent::Key(e) => {
@@ -59,10 +63,6 @@ impl EventHandler {
                         _ => sender.send(Event::Tick),
                     }
                     .expect("failed to send terminal event")
-                }
-
-                if !*running2.lock().unwrap() {
-                    break;
                 }
             })
         };

@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use crate::{app::SelectedInput, event::EventHandler, tab::TabType, App, ViewMode};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind};
@@ -7,15 +9,19 @@ use anyhow::Result;
 
 use log::info;
 
-pub fn update(events: &EventHandler, app: &mut App) -> Result<()> {
-    *app.copying_to_clipboard_mut() = false;
+pub fn update(events: &EventHandler, app: Arc<Mutex<App>>) -> Result<()> {
+    *app.lock().unwrap().copying_to_clipboard_mut() = false;
 
     match events.next()? {
+        // To avoid deadlock, the app mutex must be locked after the event is read
+        // This is so that we can process events from the file monitor (which also locks the mutex)
         Event::Tick => {}
         Event::Key(key) => {
-            handle_key_press(key, app);
+            let mut app = app.lock().unwrap();
+            handle_key_press(key, &mut app);
         }
         Event::Mouse(mouse_event) => {
+            let mut app = app.lock().unwrap();
             if mouse_event.kind == MouseEventKind::ScrollUp {
                 app.previous(None);
             } else if mouse_event.kind == MouseEventKind::ScrollDown {

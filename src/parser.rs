@@ -8,9 +8,16 @@ use regex::Regex;
 pub type LogEntry = Vec<String>;
 
 lazy_static! {
-static ref REGEX : Regex  = Regex::new(
-        r#"^\s*(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
-    ).unwrap();
+    static ref REGEX_PATTERNS : Vec<Regex> = vec![
+        Regex::new(r#"^\s*[^\[]+\[(?P<date>\d{2}:\d{2}:\d{2}:\d+)\]:\s*(?P<log>.*)$"#).unwrap(),                                                        // Windows installer (MSI)
+        Regex::new(r#"^\s*(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)$"#).unwrap(),   // EA app
+        Regex::new(r#"^\s*\[[^\]]+\]\[(?P<date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\]i\d+:\s*(?P<log>.*)$"#).unwrap(),                                  // EA app vc_redist
+        Regex::new(r#"^\s*(?P<level>\w+)\s+(?P<date>\d{2}:\d{2}:\d{2}\s+\w+)\s+\(\s+\d+\)\s+(?P<tid>\d+)\s+(?P<log>.*)$"#).unwrap(),                    // EA app IGO
+        Regex::new(r#"^\s*(?P<level>\w+)\s+(?P<date>\d{2}:\d{2}:\d{2}\s+\w+)\s+(?P<tid>\d+)\s+\s+(?P<log>.*)$"#).unwrap(),                              // EA app IGO Proxy
+        Regex::new(r#"^\s*\[(?P<date>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\]\s+(?P<log>.*)$"#).unwrap(),                                                // Steam
+        Regex::new(r#"^\s*\[(?P<date>\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}:\d+)\][^\]]+\](?P<log>.*)$"#).unwrap(),                                    // Riot launcher (Valorant) + Epic games
+        Regex::new(r#"^\s*\[(?P<date>[^:]+):(?P<level>\w+):[^\]]+\]\s*(?P<log>.*)$"#).unwrap(),                                                         // CEF
+    ];
 }
 
 pub enum LogEntryIndices {
@@ -44,46 +51,61 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
             continue;
         }
 
-        let mut captures = REGEX.captures_iter(line);
+        let mut captures = None;
+        for regex_pattern in REGEX_PATTERNS.iter() {
+            let mut captures_iter = regex_pattern.captures_iter(line);
 
-        let cap;
-        if let Some(tmp) = captures.next() {
-            cap = tmp;
-        } else {
+            if let Some(tmp) = captures_iter.next() {
+                captures = Some(tmp);
+                break;
+            }
+        }
+
+        if captures.is_none() {
             error!("Error parsinig line: [{}]", line);
             line_num += 1;
             continue;
         }
 
-        if &cap["id"] == "0" {
+        let captures = captures.unwrap();
+        let _id = line_num;
+        if captures.name("id").map_or("", |m| m.as_str()) == "0" {
             _session += 1;
         }
-
-        let _id = line_num;
-        let date = &cap["date"];
-        let _pid = &cap["pid"];
-        let _tid = &cap["tid"];
-        let level = &cap["level"];
-        log += &cap["log"];
+        let date = &captures.name("date").map_or("", |m| m.as_str());
+        let _pid = &captures.name("pid").map_or("", |m| m.as_str());
+        let _tid = &captures.name("tid").map_or("", |m| m.as_str());
+        let level = &captures.name("level").map_or("", |m| m.as_str());
+        log += &captures.name("log").map_or("", |m| m.as_str());
 
         loop {
-            /* Deal with multiline log entries. For example:
-                1291	[2023-05-23T19:54:39.779Z]	PID: 13052	TID: 15836	VERBOSE 	(eax::services::localStorage::encryptDataToFile)	Saving [IQ] into file:
-                [C:\ProgramData\EA Desktop\530c11479fe252fc5aabc24935b9776d4900eb3ba58fdc271e0d6229413ad40e\IQ]
-            */
-
+            // Deal with multiline log entries where only the 1st line matches the regex.
+            // We append the next lines to the first line and show them as a single log entry
             if line_num >= lines.len() - 1 {
                 break;
             }
 
             line_num += 1;
             let next_line = lines[line_num];
-            let mut cap = REGEX.captures_iter(next_line);
-            if cap.next().is_none() {
+
+            let mut valid_captures = None;
+            for regex_pattern in REGEX_PATTERNS.iter() {
+                let mut captures = regex_pattern.captures_iter(next_line);
+
+                if captures.next().is_some() {
+                    valid_captures = Some(captures);
+                    break;
+                }
+            }
+
+            if valid_captures.is_none() {
+                // Current line doesn't match any known formats so we assume it's a continuation of a multiline log entry
                 log += next_line;
                 continue;
             }
 
+            // Current line is an actual log line (and not a continuation of a multiline log entry)
+            // So we go back to the previous line and break (so that the current line will be processed as a separate entry)
             line_num -= 1;
             break;
         }

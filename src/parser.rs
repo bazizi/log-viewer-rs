@@ -8,18 +8,15 @@ use regex::Regex;
 pub type LogEntry = Vec<String>;
 
 lazy_static! {
-static ref EAA_REGEX : Regex  = Regex::new(
-        r#"^\s*(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
-    ).unwrap();
-
-static ref STEAM_REGEX : Regex  = Regex::new(r#"^\s*\[(?P<date>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\]\s+(?P<log>.*)$"#).unwrap();
-
-
-static ref REGEX_PATTERNS : Vec<Regex> = vec![
-    Regex::new(
-        r#"^\s*(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)"#,
-    ).unwrap(), // EAA
-    Regex::new(r#"^\s*\[(?P<date>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\]\s+(?P<log>.*)$"#).unwrap() // Steam
+    static ref REGEX_PATTERNS : Vec<Regex> = vec![
+        Regex::new(r#"^\s*[^\[]+\[(?P<date>\d{2}:\d{2}:\d{2}:\d+)\]:\s*(?P<log>.*)$"#).unwrap(),                                                        // Windows installer (MSI)
+        Regex::new(r#"^\s*(?P<id>\d+)\s+\[(?P<date>[^\]]+)\]\s+PID:\s*(?P<pid>\d+)\s+TID:\s*(?P<tid>\d+)\s+(?P<level>\w+)\s+(?P<log>.*)$"#).unwrap(),   // EA app
+        Regex::new(r#"^\s*\[[^\]]+\]\[(?P<date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\]i\d+:\s*(?P<log>.*)$"#).unwrap(),                                  // EA app vc_redist
+        Regex::new(r#"^\s*(?P<level>\w+)\s+(?P<date>\d{2}:\d{2}:\d{2}\s+\w+)\s+\(\s+\d+\)\s+(?P<tid>\d+)\s+(?P<log>.*)$"#).unwrap(),                    // EA app IGO
+        Regex::new(r#"^\s*(?P<level>\w+)\s+(?P<date>\d{2}:\d{2}:\d{2}\s+\w+)\s+(?P<tid>\d+)\s+\s+(?P<log>.*)$"#).unwrap(),                              // EA app IGO Proxy
+        Regex::new(r#"^\s*\[(?P<date>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\]\s+(?P<log>.*)$"#).unwrap(),                                                // Steam
+        Regex::new(r#"^\s*\[(?P<date>\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}:\d+)\][^\]]+\](?P<log>.*)$"#).unwrap(),                                    // Riot launcher (Valorant) + Epic games
+        Regex::new(r#"^\s*\[(?P<date>[^:]+):(?P<level>\w+):[^\]]+\]\s*(?P<log>.*)$"#).unwrap(),                                                         // CEF
     ];
 }
 
@@ -71,11 +68,10 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         }
 
         let captures = captures.unwrap();
+        let _id = line_num;
         if captures.name("id").map_or("", |m| m.as_str()) == "0" {
             _session += 1;
         }
-
-        let _id = line_num;
         let date = &captures.name("date").map_or("", |m| m.as_str());
         let _pid = &captures.name("pid").map_or("", |m| m.as_str());
         let _tid = &captures.name("tid").map_or("", |m| m.as_str());

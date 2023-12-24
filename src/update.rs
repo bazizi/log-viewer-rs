@@ -116,7 +116,7 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
                 app.search_input_text_mut().add_char(c);
             }
             KeyCode::Backspace => {
-                if key_modifiers == KeyModifiers::CONTROL {
+                if key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL {
                     app.search_input_text_mut().clear();
                 } else {
                     app.search_input_text_mut().remove_char();
@@ -129,13 +129,19 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
             KeyCode::Down => app.next(Some(app.search_input_text().text().clone())),
             KeyCode::Up => app.previous(Some(app.search_input_text().text().clone())),
+            KeyCode::Enter => {
+                if key_modifiers & KeyModifiers::SHIFT == KeyModifiers::SHIFT {
+                    app.previous(Some(app.search_input_text().text().clone()));
+                } else if key_modifiers == KeyModifiers::NONE {
+                    app.next(Some(app.search_input_text().text().clone()));
+                }
+            }
             KeyCode::Left => app.search_input_text_mut().cursor_left(),
             KeyCode::Right => app.search_input_text_mut().cursor_right(),
             KeyCode::PageDown => app.skipping_next(),
             KeyCode::PageUp => app.skipping_prev(),
             KeyCode::Home => app.start(),
             KeyCode::End => app.end(),
-
             KeyCode::Esc => {
                 *app.selected_input_mut() = None;
                 app.view_mode_mut().pop_back();

@@ -1,8 +1,4 @@
 - Bugfix: Copying multiline log entries
 - Save config upon exit
-- Bugfix: While filtering in tail mode: upon removal of filter, the list keeps showing previously filtered items
-- Unit test and support for multiple log formats
-- Demo video
-- Filter sessions (dropdown)
+- Unit test 
 - Add updater
-- Add help UI

@@ -61,13 +61,24 @@ fn handle_key_press(key: KeyEvent, app: &mut App) {
         return;
     }
 
-    handle_normal_mode(key.code, app);
+    handle_normal_mode(key.code, app, key.modifiers);
 }
 
 fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut App) {
     if let Some(SelectedInput::Filter) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
+                if c.to_lowercase().eq('c'.to_lowercase())
+                    && key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL
+                {
+                    // Exiting out of filter mode using Ctrl-C
+                    if let Some(ViewMode::TableItem(_)) = app.view_mode().back() {
+                        app.view_mode_mut().pop_back();
+                    } else {
+                        *app.selected_input_mut() = None;
+                    }
+                    return;
+                }
                 app.filter_input_text_mut().add_char(c);
                 app.filter_by_current_input(app.filter_input_text().text().clone());
             }
@@ -113,6 +124,14 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
     if let Some(SelectedInput::Search) = &mut app.selected_input() {
         match key_code {
             KeyCode::Char(c) => {
+                if c.to_lowercase().eq('c'.to_lowercase())
+                    && key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL
+                {
+                    // Exiting out of search mode using Ctrl-C
+                    *app.selected_input_mut() = None;
+                    app.view_mode_mut().pop_back();
+                    return;
+                }
                 app.search_input_text_mut().add_char(c);
             }
             KeyCode::Backspace => {
@@ -151,10 +170,16 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
     }
 }
 
-fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
+fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifiers) {
     match key_code {
-        KeyCode::Char('q') => {
+        KeyCode::Char('q') | KeyCode::Char('Q') => {
             *app.running_mut() = false;
+        }
+        KeyCode::Char('G') | KeyCode::Char('g') => {
+            if let KeyModifiers::SHIFT = key_modifiers {
+                // Vim style binding to go to the end of log
+                app.end();
+            }
         }
         KeyCode::Char('x') => {
             if app.tabs().is_empty() {
@@ -220,6 +245,16 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App) {
                 .output()
                 .unwrap();
             *app.copying_to_clipboard_mut() = true;
+        }
+        KeyCode::Char('{') => {
+            if let KeyModifiers::SHIFT = key_modifiers {
+                app.skipping_prev()
+            }
+        }
+        KeyCode::Char('}') => {
+            if let KeyModifiers::SHIFT = key_modifiers {
+                app.skipping_next()
+            }
         }
         _ => {}
     }

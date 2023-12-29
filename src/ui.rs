@@ -1,8 +1,8 @@
 use crate::tab::TabType;
 use crate::{app::SelectedInput, parser::LogEntryIndices, App, ViewMode};
-
 use ratatui::layout::Margin;
 use ratatui::style::Stylize;
+use ratatui::widgets::block::Position;
 use ratatui::widgets::Scrollbar;
 use ratatui::widgets::ScrollbarOrientation;
 use ratatui::widgets::ScrollbarState;
@@ -29,7 +29,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 Constraint::Length(3),      // search/filter
                 Constraint::Length(3),      // Tabs
                 Constraint::Percentage(10), // preview
-                Constraint::Percentage(90), // table
+                Constraint::Percentage(85), // table
             ]
             .as_ref()
         })
@@ -275,8 +275,21 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .header(header)
         .block(
             Block::default()
-                .borders(Borders::ALL)
+                .borders(Borders::TOP)
                 .title(app.tabs()[app.selected_tab_index()].name.clone()),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::BOTTOM)
+                .title(format!(
+                    " Page [{}] ",
+                    app.tabs()[app.selected_tab_index()]
+                        .filtered_view_items
+                        .selected_item_index
+                        / app.view_buffer_size()
+                        + 1
+                ))
+                .title_position(Position::Bottom),
         )
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">>")

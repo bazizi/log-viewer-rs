@@ -124,6 +124,10 @@ impl App {
         &mut self.copying_to_clipboard
     }
 
+    pub fn view_buffer_size(&self) -> usize {
+        self.view_buffer_size
+    }
+
     pub fn tabs(&self) -> &Vec<Tab> {
         &self.tabs
     }

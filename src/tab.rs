@@ -24,7 +24,7 @@ impl Tab {
     pub fn new(file_path: String, table_items: TableItems, tab_type: TabType) -> Self {
         if let TabType::Combined = tab_type {
             return Tab {
-                name: "Combined".to_owned(),
+                name: " [Combined] ".to_owned(),
                 items: table_items.clone(),
                 filtered_view_items: table_items,
                 last_file_size: 0,
@@ -34,12 +34,14 @@ impl Tab {
         }
 
         Tab {
-            name: std::path::Path::new(file_path.clone().as_str())
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string(),
+            name: format!(
+                " [{}] ",
+                std::path::Path::new(file_path.clone().as_str())
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+            ),
             items: table_items.clone(),
             filtered_view_items: table_items,
             last_file_size: if let Ok(meta) = std::fs::metadata(file_path.clone()) {

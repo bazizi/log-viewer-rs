@@ -20,6 +20,7 @@ Only Windows is tested, but this project is expected to work on other platforms 
 - Viewing entries combined from multiple log files ordered by log date
 - Ability to tail log files in real time
 - Copying log entries to clipboard (Windows-only)
+- Prettified JSON view for log entries that contain JSON data
 
 ## Supported log formats
 Only UTF-8 encoded logs are supported currently. The following formats are supported, but more formats can be added per request:

@@ -7,10 +7,14 @@ A log viewer with terminal UI.
 ## Build
 Install rustup and run:
 ```sh
-cargo build --release
-.\target\release\log-viewer-rs.exe 
+cargo run --release
 ```
 
 ## Supported platforms
 
-Currently only Windows is supported.
+Only Windows is tested.
+
+## Features
+- Filtering log entires by keyword
+- Searching log entries by keyword + highlighting matches
+- Viewing entries combined from multiple log files ordered by log date

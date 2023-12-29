@@ -20,7 +20,7 @@ Only Windows is tested, but this project is expected to work on other platforms 
 - Viewing entries combined from multiple log files ordered by log date
 
 ## Supported log formats
-Currently the following formats are supported, but more formats can be added per request:
+Only UTF-8 encoded logs are supported currently. The following formats are supported, but more formats can be added per request:
 - Windows (MSI) installer logs
 - CEF logs
 - Multiple log formats from game launchers on Windows (e.g., Steam)

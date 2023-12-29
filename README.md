@@ -18,9 +18,14 @@ Only Windows is tested, but this project is expected to work on other platforms 
 - Filtering log entires by keyword
 - Searching log entries by keyword + highlighting matches
 - Viewing entries combined from multiple log files ordered by log date
+- Ability to tail log files in real time
+- Copying log entries to clipboard (Windows-only)
 
 ## Supported log formats
 Only UTF-8 encoded logs are supported currently. The following formats are supported, but more formats can be added per request:
 - Windows (MSI) installer logs
 - CEF logs
 - Multiple log formats from game launchers on Windows (e.g., Steam)
+
+## Known issues
+- Copying multi-line log entries to clipboard currently does not work.

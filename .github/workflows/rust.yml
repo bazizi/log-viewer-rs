@@ -26,7 +26,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Get dependencies
-      run: apt-get install librust-atk-dev && apt-get install librust-gdk-sys-dev
+      run: sudo apt-get install librust-atk-dev && sudo apt-get install librust-gdk-sys-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests

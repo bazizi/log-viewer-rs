@@ -10,12 +10,23 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build-windows:
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+  
+  build-ubuntu:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get dependencies
+      run: sudo apt-get install librust-atk-dev && sudo apt-get install librust-gdk-sys-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests

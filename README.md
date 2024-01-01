@@ -11,8 +11,17 @@ cargo run --release
 ```
 
 ## Supported platforms
+### Windows
 
-Only Windows is tested, but this project is expected to work on other platforms with zero to minimal effort.
+Windows is the main platform that's tested, but this project is expected to work on other platforms with zero to minimal effort.
+
+### Ubuntu
+The following packages need to be installed for this project to build on Ubuntu:
+
+```sh
+sudo apt-get install librust-atk-dev
+sudo apt-get install librust-gdk-sys-dev
+```
 
 ## Features
 - Filtering log entires by keyword

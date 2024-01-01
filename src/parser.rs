@@ -30,19 +30,11 @@ pub enum LogEntryIndices {
     Log,
 }
 
-pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
-    info!("Attempting to parse log file [{}]...", log_path);
-
+fn parse_log_vec(lines: &Vec<&str>, log_path: &str) -> Vec<Vec<String>> {
     let mut line_num = 0;
     let mut _session = 0;
-    let mut contents = String::new();
-    let lines = {
-        let mut f = std::fs::File::open(log_path)?;
-        f.read_to_string(&mut contents)?;
-        contents.lines().collect::<Vec<&str>>()
-    };
-
     let mut log_entries = Vec::<Vec<String>>::new();
+
     while line_num < lines.len() {
         let mut log = String::new();
         let line = lines[line_num];
@@ -113,9 +105,9 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         log_entries.push(vec![
             std::path::Path::new(log_path)
                 .file_name()
-                .unwrap()
+                .unwrap_or_default()
                 .to_str()
-                .unwrap()
+                .unwrap_or_default()
                 .to_string(),
             // id.to_string(),
             // _session.to_string(),
@@ -135,5 +127,59 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
         log_path
     );
 
-    Ok(log_entries)
+    log_entries
+}
+
+pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
+    info!("Attempting to parse log file [{}]...", log_path);
+
+    let mut contents = String::new();
+    let lines = {
+        let mut f = std::fs::File::open(log_path)?;
+        f.read_to_string(&mut contents)?;
+        contents.lines().collect::<Vec<&str>>()
+    };
+
+    Ok(parse_log_vec(&lines, log_path))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::parse_log_vec;
+
+    #[test]
+    fn test_msi_parse() {
+        let log_lines = vec![
+            "an invalid line",
+            "[1E78:1CCC][2023-09-03T16:46:28]i001: Burn v3.8.1128.0, Windows v6.3 (Build 9600: Service Pack 0), path: C:\\Program Files (x86)\\Epic Games\\Launcher\\Portal\\SelfUpdateStaging\\Install\\Portal\\Extras\\Redist\\LauncherPrereqSetup_x64.exe, cmdline: '/quiet /log \"C:/Users/behna/AppData/Local/EpicGamesLauncher/Saved/Logs/SelfUpdatePrereqInstall.log\" -burn.unelevated BurnPipe.{728D72EE-4979-4A05-84E7-FCB1B3712CDD} {529A9DC5-F441-4AF4-ACBC-8809762531C3} 20096'",
+            "another invalid line",
+            "[1E78:1CCC][2023-09-03T16:46:28]i000: Setting string variable 'WixBundleLog' to value 'C:/Users/behna/AppData/Local/EpicGamesLauncher/Saved/Logs/SelfUpdatePrereqInstall.log'",
+            "another invalid line",
+        ];
+        assert_eq!(parse_log_vec(&log_lines, "").len(), 2);
+    }
+
+    #[test]
+    fn test_cef_parse() {
+        let log_lines = vec![
+            "an invalid line",
+            "[0901/211250.717:ERROR:adm_helpers.cc(62)] Failed to query stereo recording.",
+            "an invalid line",
+            "[0901/211250.738:WARNING:mediasession.cc(347)] Duplicate id found. Reassigning from 104 to 125",
+            "an invalid line",
+            "[0901/211250.798:WARNING:stunport.cc(384)] Jingle:Port[000002172D841260:data:1:0:local:Net[any:0:0:0:x:x:x:x:x/0:Unknown]]: StunPort: stun host lookup received error 0",
+            "an invalid line",
+            "[1013/215308.845:ERROR:adm_helpers.cc(62)] Failed to query stereo recording.",
+            "an invalid line",
+            "[1013/215308.863:WARNING:mediasession.cc(347)] Duplicate id found. Reassigning from 104 to 125",
+            "an invalid line",
+            "[1013/215308.921:WARNING:stunport.cc(384)] Jingle:Port[0000018F02628910:data:1:0:local:Net[any:0:0:0:x:x:x:x:x/0:Unknown]]: StunPort: stun host lookup received error 0",
+            "an invalid line",
+        ];
+        assert_eq!(parse_log_vec(&log_lines, "").len(), 6);
+    }
+    #[test]
+    fn test_eaa_parse() {
+        // TODO - add test
+    }
 }

@@ -170,7 +170,8 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
     }
 }
 
-fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifiers) {
+fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifiers)
+{
     match key_code {
         KeyCode::Char('q') | KeyCode::Char('Q') => {
             *app.running_mut() = false;

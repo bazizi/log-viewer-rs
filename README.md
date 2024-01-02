@@ -27,9 +27,12 @@ sudo apt-get install librust-gdk-sys-dev
 - Filtering log entires by keyword
 - Searching log entries by keyword + highlighting matches
 - Viewing entries combined from multiple log files ordered by log date
+- Ability to tail log files in real time
+- Copying log entries to clipboard (Windows-only)
+- Prettified JSON view for log entries that contain JSON data
 
 ## Supported log formats
-Currently the following formats are supported, but more formats can be added per request:
+Only UTF-8 encoded logs are supported currently. The following formats are supported, but more formats can be added per request:
 - Windows (MSI) installer logs
 - CEF logs
 - Multiple log formats from game launchers on Windows (e.g., Steam)
@@ -47,3 +50,6 @@ Currently the following formats are supported, but more formats can be added per
 | Search for log entires using a keyword | `s` |
 | Show a file picker to open a new log file in a new tab (only supported in GUI environments) | `o` |
 
+## Known issues
+- Copying multi-line log entries to clipboard currently does not work.
+- Search only highlights the first match per log entry.

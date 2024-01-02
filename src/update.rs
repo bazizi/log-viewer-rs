@@ -232,6 +232,7 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
             app.set_tail_enabled(!app.tail_enabled());
         }
         KeyCode::Char('c') => {
+            // temporary hack: remove pipe operators as escaping them doesn't work in CMD
             copy_to_clipboard(&app
                               .selected_log_entry_in_text()
                               .replace(['>', '<', '|'], ""));
@@ -261,7 +262,6 @@ fn copy_to_clipboard(_log_str: &str)
 #[cfg(target_os = "windows")]
 fn copy_to_clipboard(log_str: &str)
 {
-    // temporary hack: remove pipe operators as escaping them doesn't work in CMD
     std::process::Command::new("cmd")
         .args(["/C", format!("echo {log_str} | clip.exe").as_str()])
         .output()

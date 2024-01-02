@@ -40,7 +40,7 @@ Only UTF-8 encoded logs are supported currently. The following formats are suppo
 ## Key bindings
 | Action | Keys  | 
 | ---  | ---     |
-| Change the currently active log entry (skipping 5 entries at a time) | `<C-{>` / `<C-}>` (or page up/down) |
+| Change the currently active log entry (skipping 5 entries at a time) | `<Shift-{>` / `<Shift-}>` (or page up/down) |
 | Change the currently active log entry | `j`/`k` (or down/up arrow keys) |
 | Change the currently active tab | `h` / `l` (or left/right arrow keys)  |
 | Close the current tab | `x` |

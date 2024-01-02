@@ -35,7 +35,7 @@ Currently the following formats are supported, but more formats can be added per
 - Multiple log formats from game launchers on Windows (e.g., Steam)
 
 ## Key bindings
-| keys | action | 
+| Action | Keys  | 
 | ---  | ---     |
 | Change the currently active log entry (skipping 5 entries at a time) | `<C-{>` / `<C-}>` (or page up/down) |
 | Change the currently active log entry | `j`/`k` (or down/up arrow keys) |

@@ -34,7 +34,8 @@ pub fn highlight_keywords_in_text<'a>(text: &'a str, keywords: &'a str) -> Text<
 
     let mut text_spans = vec![];
     let mut prev_span_end = 0;
-    for (keyword_start, keyword_end) in keyword_positions_in_text {
+    for (keyword_start, keyword_end) in keyword_positions_in_text
+    {
         text_spans.push(Span::raw(&text[prev_span_end..keyword_start]));
 
         text_spans.push(Span::styled(

@@ -170,8 +170,7 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
     }
 }
 
-fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifiers)
-{
+fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifiers) {
     match key_code {
         KeyCode::Char('q') | KeyCode::Char('Q') => {
             *app.running_mut() = false;
@@ -180,7 +179,12 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
             if let KeyModifiers::SHIFT = key_modifiers {
                 // Vim style binding to go to the end of log
                 app.end();
+            } else if app.last_key_input().is_some()
+                && (app.last_key_input().unwrap().to_lowercase().last().unwrap() == 'g')
+            {
+                app.start();
             }
+            *app.last_key_input_mut() = Some('g');
         }
         KeyCode::Char('x') => {
             if app.tabs().is_empty() {
@@ -210,8 +214,8 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
         KeyCode::Left | KeyCode::Char('h') => app.prev_tab(),
         KeyCode::Down | KeyCode::Char('j') => app.next(None),
         KeyCode::Up | KeyCode::Char('k') => app.previous(None),
-        KeyCode::PageDown => app.skipping_next(),
-        KeyCode::PageUp => app.skipping_prev(),
+        KeyCode::Char('}') | KeyCode::PageDown => app.skipping_next(),
+        KeyCode::Char('{') | KeyCode::PageUp => app.skipping_prev(),
 
         KeyCode::Char('f') => {
             if app.tabs().is_empty() {
@@ -233,37 +237,34 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
         }
         KeyCode::Char('c') => {
             // temporary hack: remove pipe operators as escaping them doesn't work in CMD
-            copy_to_clipboard(&app
-                              .selected_log_entry_in_text()
-                              .replace(['>', '<', '|'], ""));
-                *app.copying_to_clipboard_mut() = true;
-
+            copy_to_clipboard(
+                &app.selected_log_entry_in_text()
+                    .replace(['>', '<', '|'], ""),
+            );
+            *app.copying_to_clipboard_mut() = true;
         }
-        KeyCode::Char('{') => {
-            if let KeyModifiers::SHIFT = key_modifiers {
-                app.skipping_prev()
-            }
+        KeyCode::Char('n') => {
+            // vim style iteration through search matches (go to next match)
+            app.next(Some(app.search_input_text().text().clone()));
         }
-        KeyCode::Char('}') => {
-            if let KeyModifiers::SHIFT = key_modifiers {
-                app.skipping_next()
-            }
+        KeyCode::Char('p') => {
+            // vim style iteration through search matches (go to previous match)
+            app.previous(Some(app.search_input_text().text().clone()));
         }
         _ => {}
     }
 }
 
 #[cfg(target_os = "linux")]
-fn copy_to_clipboard(_log_str: &str)
-{
+fn copy_to_clipboard(_log_str: &str) {
     unimplemented!();
 }
 
 #[cfg(target_os = "windows")]
-fn copy_to_clipboard(log_str: &str)
-{
+fn copy_to_clipboard(log_str: &str) {
     std::process::Command::new("cmd")
         .args(["/C", format!("echo {log_str} | clip.exe").as_str()])
         .output()
         .unwrap();
 }
+

@@ -234,7 +234,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 } else {
                     LogEntryIndices::Date as usize
                 };
-            let cells = item[starting_cell..item.len()].iter().map(|c| {
+            let cells = item[starting_cell..item.len()].iter().map(|c: &String| {
                 Cell::from(highlight_keywords_in_text(
                     c,
                     app.search_input_text().text(),

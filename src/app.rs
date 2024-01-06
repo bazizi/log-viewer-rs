@@ -66,6 +66,7 @@ pub struct App {
     tail_enabled: bool,
     copying_to_clipboard: bool,
     mouse_position: (u16, u16),
+    last_key_input: Option<char>
 }
 
 impl App {
@@ -109,11 +110,22 @@ impl App {
             tail_enabled: false,
             copying_to_clipboard: false,
             mouse_position: (0, 0),
+            last_key_input: None
         };
 
         app.reload_combined_tab();
 
         app
+    }
+
+    pub fn last_key_input(&self) -> Option<char>
+    {
+        self.last_key_input
+    }
+
+    pub fn last_key_input_mut(&mut self) -> &mut Option<char>
+    {
+        &mut self.last_key_input
     }
 
     pub fn copying_to_clipboard(&mut self) -> bool {

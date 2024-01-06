@@ -38,18 +38,18 @@ Only UTF-8 encoded logs are supported currently. The following formats are suppo
 - Multiple log formats from game launchers on Windows (e.g., Steam)
 
 ## Key bindings
-| Action | Keys  | 
+| Action | Keys |
 | ---  | ---     |
+| Change the currently active log entry (skipping 5 entries at a time) | `{` / `}` (or `PageUp`/'PageDown') |
 | Change the currently active log entry (skipping 5 entries at a time) | `<Shift-{>` / `<Shift-}>` (or page up/down) |
 | Change the currently active log entry | `j`/`k` (or down/up arrow keys) |
 | Change the currently active tab | `h` / `l` (or left/right arrow keys)  |
 | Close the current tab | `x` |
 | Enable/disable tailing | `t` |
-| Exit the current view (or remove focus from the currently focused input box)  | `Esc` / `<C-c>` |
+| Exit the current view / Remove focus from the currently focused input field | `Esc` / `<C-c>` / `<C-{>` |
 | Filter log entries using a keyword | `f` |
+| Go to the next / previous search match (when no input field is focused) | `n` / `p` | 
 | Search for log entires using a keyword | `s` |
 | Show a file picker to open a new log file in a new tab (only supported in GUI environments) | `o` |
 
-## Known issues
-- Copying multi-line log entries to clipboard currently does not work.
-- Search only highlights the first match per log entry.
+

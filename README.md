@@ -27,20 +27,23 @@ sudo apt-get install librust-gdk-sys-dev
 - Filtering log entires by keyword
 - Searching log entries by keyword + highlighting matches
 - Viewing entries combined from multiple log files ordered by log date
+- Ability to tail log files in real time
+- Copying log entries to clipboard (Windows-only)
+- Prettified JSON view for log entries that contain JSON data
 
 ## Supported log formats
-Currently the following formats are supported, but more formats can be added per request:
+Only UTF-8 encoded logs are supported currently. The following formats are supported, but more formats can be added per request:
 - Windows (MSI) installer logs
 - CEF logs
 - Multiple log formats from game launchers on Windows (e.g., Steam)
 
 ## Key bindings
-| keys | action | 
+| Action | Keys |
 | ---  | ---     |
 | Change the currently active log entry (skipping 5 entries at a time) | `{` / `}` (or `PageUp`/'PageDown') |
 | Change the currently active log entry (skipping 5 entries at a time) | `<Shift-{>` / `<Shift-}>` (or page up/down) |
 | Change the currently active log entry | `j`/`k` (or down/up arrow keys) |
-| Change the currenty active tab | `h` / `l` (or left/right arrow keys)  |
+| Change the currently active tab | `h` / `l` (or left/right arrow keys)  |
 | Close the current tab | `x` |
 | Enable/disable tailing | `t` |
 | Exit the current view / Remove focus from the currently focused input field | `Esc` / `<C-c>` / `<C-{>` |

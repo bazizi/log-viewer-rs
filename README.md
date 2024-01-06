@@ -38,6 +38,7 @@ Currently the following formats are supported, but more formats can be added per
 | keys | action | 
 | ---  | ---     |
 | Change the currently active log entry (skipping 5 entries at a time) | `{` / `}` (or `PageUp`/'PageDown') |
+| Change the currently active log entry (skipping 5 entries at a time) | `<Shift-{>` / `<Shift-}>` (or page up/down) |
 | Change the currently active log entry | `j`/`k` (or down/up arrow keys) |
 | Change the currenty active tab | `h` / `l` (or left/right arrow keys)  |
 | Close the current tab | `x` |

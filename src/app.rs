@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::io::Read;
 use std::ops::Range;
 use std::vec;
 
@@ -13,6 +14,9 @@ use crate::input_element::InputTextElement;
 use crate::tab::Tab;
 use crate::tab::TabType;
 use crate::tab::TableItems;
+
+use serde_json::{json, Value};
+use std::io::prelude::Write;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
 const DEFAULT_SKIP_SIZE: usize = 5;
@@ -66,7 +70,7 @@ pub struct App {
     tail_enabled: bool,
     copying_to_clipboard: bool,
     mouse_position: (u16, u16),
-    last_key_input: Option<char>
+    last_key_input: Option<char>,
 }
 
 impl App {
@@ -94,6 +98,29 @@ impl App {
                 .collect::<Vec<Tab>>(),
         );
 
+        // Load config file saved the last session before exit
+        if let Ok(mut config_file) = std::fs::File::open("log-viewer-rs-config.json") {
+            let mut str_config_file = String::new();
+            if config_file.read_to_string(&mut str_config_file).is_ok() {
+                let mut json_config_file: Value = serde_json::from_str(&str_config_file).unwrap();
+                tabs.append(
+                    &mut json_config_file["tabs"]
+                        .as_array_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .map(|file_path| {
+                            let table_items = TableItems {
+                                data: parser::parse_log_by_path(&file_path.to_string())
+                                    .unwrap_or_default(),
+                                selected_item_index: 0,
+                            };
+                            Tab::new(file_path.to_string(), table_items, TabType::Normal)
+                        })
+                        .collect::<Vec<Tab>>(),
+                );
+            }
+        }
+
         let mut app = App {
             running: true,
             table_view_state: TableViewState {
@@ -110,7 +137,7 @@ impl App {
             tail_enabled: false,
             copying_to_clipboard: false,
             mouse_position: (0, 0),
-            last_key_input: None
+            last_key_input: None,
         };
 
         app.reload_combined_tab();
@@ -118,13 +145,11 @@ impl App {
         app
     }
 
-    pub fn last_key_input(&self) -> Option<char>
-    {
+    pub fn last_key_input(&self) -> Option<char> {
         self.last_key_input
     }
 
-    pub fn last_key_input_mut(&mut self) -> &mut Option<char>
-    {
+    pub fn last_key_input_mut(&mut self) -> &mut Option<char> {
         &mut self.last_key_input
     }
 
@@ -663,5 +688,20 @@ impl App {
                     .selected_item_index = item_to_select;
             }
         }
+    }
+}
+
+impl Drop for App {
+    fn drop(&mut self) {
+        let serialized = json!({"tabs": self.tabs().iter().map(|tab|{
+        tab.file_path.clone()
+        }).collect::<Vec<String>>()});
+        let mut config_file = std::fs::File::create("log-viewer-rs-config.json").unwrap();
+
+        println!("Serializing config ..");
+        config_file
+            .write_all(serialized.to_string().as_bytes())
+            .unwrap();
+        println!("DONE");
     }
 }

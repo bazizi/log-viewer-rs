@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::io::Read;
 
-use log::{error, info};
+use log::info;
 
 use regex::Regex;
 
@@ -54,7 +54,7 @@ fn parse_log_vec(lines: &Vec<&str>, log_path: &str) -> Vec<Vec<String>> {
         }
 
         if captures.is_none() {
-            error!("Error parsinig line: [{}]", line);
+            info!("Error parsinig line: [{}]", line);
             line_num += 1;
             continue;
         }
@@ -147,19 +147,20 @@ pub fn parse_log_by_path(log_path: &str) -> Result<Vec<LogEntry>> {
 mod tests {
     use crate::parser::parse_log_vec;
 
-    fn verify_parsed_result(parsed_result: &Vec<Vec<String>>, num_expected_lines: usize, num_expected_cols: usize)
-    {
+    fn verify_parsed_result(
+        parsed_result: &Vec<Vec<String>>,
+        num_expected_lines: usize,
+        num_expected_cols: usize,
+    ) {
         assert_eq!(parsed_result.len(), num_expected_lines);
-        if num_expected_lines == 0
-        {
+        if num_expected_lines == 0 {
             return;
         }
         assert_eq!(parsed_result[0].len(), num_expected_cols);
     }
 
     #[test]
-    fn test_msi_parse()
-    {
+    fn test_msi_parse() {
         let log_lines = vec![
             "an invalid line",
             "[1E78:1CCC][2023-09-03T16:46:28]i001: Burn v3.8.1128.0, Windows v6.3 (Build 9600: Service Pack 0), path: C:\\Program Files (x86)\\Epic Games\\Launcher\\Portal\\SelfUpdateStaging\\Install\\Portal\\Extras\\Redist\\LauncherPrereqSetup_x64.exe, cmdline: '/quiet /log \"C:/Users/behna/AppData/Local/EpicGamesLauncher/Saved/Logs/SelfUpdatePrereqInstall.log\" -burn.unelevated BurnPipe.{728D72EE-4979-4A05-84E7-FCB1B3712CDD} {529A9DC5-F441-4AF4-ACBC-8809762531C3} 20096'",
@@ -188,8 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn test_eaa_vc_redist_parse()
-    {
+    fn test_eaa_vc_redist_parse() {
         let log_lines = vec![
             "an invalid line",
             "MSI (s) (38:48) [20:10:58:904]: Note: 1: 1707 ",
@@ -204,8 +204,7 @@ mod tests {
     }
 
     #[test]
-    fn test_eaa_igo_parse()
-    {
+    fn test_eaa_igo_parse() {
         let log_lines = vec![
             "Process Information",                                                                // parser ignores this line
             "    PID: 1280",                                                                      // parser ignores this line
@@ -224,8 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn test_eaa_igo_proxy_parse()
-    {
+    fn test_eaa_igo_proxy_parse() {
         let log_lines = vec![
             "INFO	02:19:32 AM	16664	         Helpers.cpp:  628		Defaulf value for environment variable IGOLogDirPath is C:\\Users\\behna\\AppData\\Local\\Electronic Arts\\EA Desktop\\Logs",
             "Final value of the environment varialble IGOLogDirPath is C:\\Users\\behna\\AppData\\Local\\Electronic Arts\\EA Desktop\\Logs",   // parser ignores this line
@@ -238,16 +236,14 @@ mod tests {
     }
 
     #[test]
-    fn test_steam_parse()
-    {
-
+    fn test_steam_parse() {
         let log_lines = vec![
             "[2023-12-10 23:18:08] Change number 21482018->21482152, apps: 0/113, packages: 0/7",
             "[2023-12-10 23:33:48] Change number 21482152->21482258, apps: 0/76, packages: 0/20",
             "an invalid line",
             "[2023-12-10 23:49:33] Change number 21482258->21482366, apps: 0/81, packages: 0/28",
-            "",             // left empty on purpose to ensure the parser can handle empty lines gracefully
-            "",             // left empty on purpose to ensure the parser can handle empty lines gracefully
+            "", // left empty on purpose to ensure the parser can handle empty lines gracefully
+            "", // left empty on purpose to ensure the parser can handle empty lines gracefully
             "[2023-12-23 13:44:05] Client version: 1702079146",
             "[2023-12-23 13:44:05] Packages changed: force all",
             "another invalid line",
@@ -259,8 +255,7 @@ mod tests {
     }
 
     #[test]
-    fn test_epic_parse()
-    {
+    fn test_epic_parse() {
         let log_lines = vec![
             "LogConfig: Setting CVar [[s.FlushStreamingOnExit:1]]",// parser ignores this line
             "LogInit: Object subsystem initialized",// parser ignores this line
@@ -278,8 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cef_parse()
-    {
+    fn test_cef_parse() {
         let log_lines = vec![
             "an invalid line",
             "[0901/211250.717:ERROR:adm_helpers.cc(62)] Failed to query stereo recording.",

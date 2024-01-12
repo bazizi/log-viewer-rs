@@ -113,7 +113,7 @@ impl App {
                         .map(|file_path| {
                             let mut file_path = file_path.to_string();
 
-                            // sometimes command line quotes are incoluded so here we strip the out
+                            // sometimes command line quotes are included so here we strip the out
                             if file_path.starts_with('"') && file_path.len() > 1 {
                                 file_path = file_path[1..].to_string();
                             }

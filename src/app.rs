@@ -21,6 +21,7 @@ use std::io::prelude::Write;
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
 const DEFAULT_SKIP_SIZE: usize = 5;
 const COMBINED_TAB_INDEX: usize = 0;
+const CONFIG_FILE_NAME: &str = "log-viewer-rs-config.json";
 
 pub enum SelectedInput {
     Filter,
@@ -99,7 +100,7 @@ impl App {
         );
 
         // Load config file saved the last session before exit
-        if let Ok(mut config_file) = std::fs::File::open("log-viewer-rs-config.json") {
+        if let Ok(mut config_file) = std::fs::File::open(CONFIG_FILE_NAME) {
             let mut str_config_file = String::new();
             if config_file.read_to_string(&mut str_config_file).is_ok() {
                 let mut json_config_file: Value = serde_json::from_str(&str_config_file).unwrap();
@@ -108,13 +109,24 @@ impl App {
                         .as_array_mut()
                         .unwrap()
                         .iter_mut()
+                        .filter(|file_path| !file_path.to_string().is_empty())
                         .map(|file_path| {
+                            let mut file_path = file_path.to_string();
+
+                            // sometimes command line quotes are incoluded so here we strip the out
+                            if file_path.starts_with('"') && file_path.len() > 1 {
+                                file_path = file_path[1..].to_string();
+                            }
+
+                            if file_path.ends_with('"') && file_path.len() > 1 {
+                                file_path = file_path[..file_path.len() - 1].to_string();
+                            }
+
                             let table_items = TableItems {
-                                data: parser::parse_log_by_path(&file_path.to_string())
-                                    .unwrap_or_default(),
+                                data: parser::parse_log_by_path(&file_path).unwrap_or_default(),
                                 selected_item_index: 0,
                             };
-                            Tab::new(file_path.to_string(), table_items, TabType::Normal)
+                            Tab::new(file_path, table_items, TabType::Normal)
                         })
                         .collect::<Vec<Tab>>(),
                 );
@@ -693,10 +705,12 @@ impl App {
 
 impl Drop for App {
     fn drop(&mut self) {
-        let serialized = json!({"tabs": self.tabs().iter().map(|tab|{
+        let serialized = json!({"tabs": self.tabs().iter()
+        .filter(|tab| !tab.file_path.is_empty())
+        .map(|tab|{
         tab.file_path.clone()
         }).collect::<Vec<String>>()});
-        let mut config_file = std::fs::File::create("log-viewer-rs-config.json").unwrap();
+        let mut config_file = std::fs::File::create(CONFIG_FILE_NAME).unwrap();
 
         println!("Serializing config ..");
         config_file

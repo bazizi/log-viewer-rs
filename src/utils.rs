@@ -6,7 +6,15 @@ use ratatui::prelude::Text;
 use ratatui::style::Stylize;
 use serde_json::Value;
 
-pub fn highlight_keywords_in_text<'a>(text: &'a str, keywords: &'a str) -> Text<'a> {
+#[derive(Copy, Clone)]
+enum TextStyle {
+    None,
+    Highlight,
+    Digit,
+    Separator,
+}
+
+fn highlight_search_matches<'a>(text: &'a str, keywords: &'a str) -> Vec<(String, TextStyle)> {
     let keywords = keywords
         .split(',')
         .map(|keyword| keyword.to_owned())
@@ -31,24 +39,109 @@ pub fn highlight_keywords_in_text<'a>(text: &'a str, keywords: &'a str) -> Text<
             }
         }
     }
-
     let mut text_spans = vec![];
     let mut prev_span_end = 0;
-    for (keyword_start, keyword_end) in keyword_positions_in_text
-    {
-        text_spans.push(Span::raw(&text[prev_span_end..keyword_start]));
 
-        text_spans.push(Span::styled(
-            &text[keyword_start..keyword_end],
-            Style::new().add_modifier(Modifier::BOLD).on_light_magenta(),
+    for (keyword_start, keyword_end) in keyword_positions_in_text {
+        text_spans.push((
+            text[prev_span_end..keyword_start].to_owned(),
+            TextStyle::None,
+        ));
+
+        text_spans.push((
+            text[keyword_start..keyword_end].to_owned(),
+            TextStyle::Highlight,
         ));
 
         prev_span_end = keyword_end;
     }
 
-    text_spans.push(Span::raw(&text[prev_span_end..]));
+    text_spans.push((text[prev_span_end..].to_owned(), TextStyle::None));
+    text_spans
+}
 
-    Text::from(Line::from(text_spans))
+fn highlight_chars<F>(
+    condition: F,
+    spans: Vec<(String, TextStyle)>,
+    highlight_type: TextStyle,
+) -> Vec<(String, TextStyle)>
+where
+    F: Fn(char) -> bool,
+{
+    let mut spans_ret = vec![];
+    for span in spans {
+        if let TextStyle::Highlight = span.1 {
+            // Avoid messing with highlighted items
+            spans_ret.push((span.0.to_owned(), span.1));
+            continue;
+        }
+
+        let mut numeric_char_indices = vec![];
+        for (index, chr) in span.0.char_indices() {
+            if condition(chr) {
+                numeric_char_indices.push(index);
+            }
+        }
+
+        let mut last_index_end = 0;
+        for index in numeric_char_indices {
+            spans_ret.push((span.0[last_index_end..index].to_owned(), span.1));
+
+            spans_ret.push((span.0[index..index + 1].to_owned(), highlight_type));
+            last_index_end = index + 1;
+        }
+
+        spans_ret.push((span.0[last_index_end..].to_owned(), span.1));
+    }
+
+    spans_ret
+}
+
+pub fn highlight_keywords_in_text<'a>(text: &'a str, keywords: &'a str) -> Text<'a> {
+    let text_spans = highlight_search_matches(text, keywords);
+    let mut text_spans = highlight_chars(|chr| chr.is_numeric(), text_spans, TextStyle::Digit);
+    text_spans = highlight_chars(
+        |chr| {
+            let chars = "/\\-:,\".[](){}";
+            for sep_chr in chars.chars() {
+                if chr == sep_chr {
+                    return true;
+                }
+            }
+            false
+        },
+        text_spans,
+        TextStyle::Separator,
+    );
+
+    Text::from(Line::from(
+        text_spans
+            .into_iter()
+            .map(|span| {
+                if let TextStyle::Highlight = span.1 {
+                    return Span::styled(
+                        span.0.to_owned(),
+                        Style::new().add_modifier(Modifier::BOLD).on_light_magenta(),
+                    );
+                }
+
+                if let TextStyle::Digit = span.1 {
+                    return Span::styled(
+                        span.0.to_owned(),
+                        Style::new().fg(ratatui::style::Color::LightGreen),
+                    );
+                }
+
+                if let TextStyle::Separator = span.1 {
+                    return Span::styled(
+                        span.0.to_owned(),
+                        Style::new().fg(ratatui::style::Color::LightCyan),
+                    );
+                }
+                Span::raw(span.0.to_owned())
+            })
+            .collect::<Vec<Span>>(),
+    ))
 }
 
 pub fn beatify_enclosed_json(log: &str) -> Option<String> {

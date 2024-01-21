@@ -22,13 +22,13 @@ jobs:
   
 
     - uses: "marvinpinto/action-automatic-releases@latest"
-              with:
-                repo_token: "${{ secrets.GITHUB_TOKEN }}"
-                automatic_release_tag: "latest"
-                prerelease: true
-                title: "Development Build"
-                files: |
-                  *.exe
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Development Build"
+        files: |
+          *.exe
 
   build-ubuntu:
     runs-on: ubuntu-latest
@@ -44,11 +44,11 @@ jobs:
 
 
     - uses: "marvinpinto/action-automatic-releases@latest"
-              with:
-                repo_token: "${{ secrets.GITHUB_TOKEN }}"
-                automatic_release_tag: "latest"
-                prerelease: true
-                title: "Development Build"
-                files: |
-                  log-viewer-rs
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Development Build"
+        files: |
+          log-viewer-rs
 

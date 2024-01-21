@@ -114,34 +114,80 @@ pub fn highlight_keywords_in_text<'a>(text: &'a str, keywords: &'a str) -> Text<
         TextStyle::Separator,
     );
 
-    Text::from(Line::from(
-        text_spans
-            .into_iter()
-            .map(|span| {
-                if let TextStyle::Highlight = span.1 {
-                    return Span::styled(
+    let mut line_spans = vec![];
+    for span in text_spans {
+        let lines = span.0.lines();
+        let mut is_new_line = false;
+        for line in lines {
+            line_spans.push((
+                line.to_owned(),
+                span.1,
+                is_new_line, /* controls whether span should go on a new line */
+            ));
+            is_new_line = true;
+        }
+    }
+
+    let mut spans = line_spans
+        .into_iter()
+        .map(|span| {
+            if let TextStyle::Highlight = span.1 {
+                return Some((
+                    Span::styled(
                         span.0.to_owned(),
                         Style::new().add_modifier(Modifier::BOLD).on_light_magenta(),
-                    );
-                }
+                    ),
+                    span.2,
+                ));
+            }
 
-                if let TextStyle::Digit = span.1 {
-                    return Span::styled(
+            if let TextStyle::Digit = span.1 {
+                return Some((
+                    Span::styled(
                         span.0.to_owned(),
                         Style::new().fg(ratatui::style::Color::LightGreen),
-                    );
-                }
+                    ),
+                    span.2,
+                ));
+            }
 
-                if let TextStyle::Separator = span.1 {
-                    return Span::styled(
+            if let TextStyle::Separator = span.1 {
+                return Some((
+                    Span::styled(
                         span.0.to_owned(),
                         Style::new().fg(ratatui::style::Color::LightCyan),
-                    );
+                    ),
+                    span.2,
+                ));
+            }
+            Some((Span::raw(span.0.to_owned()), span.2))
+        })
+        .collect::<Vec<Option<(Span, bool)>>>();
+
+    let lines = {
+        let mut span_index = 0;
+        let mut lines = vec![];
+        loop {
+            if span_index >= spans.len() {
+                break;
+            }
+
+            let mut spans_on_same_line = vec![];
+
+            loop {
+                spans_on_same_line.push(spans[span_index].take().unwrap().0);
+                span_index += 1;
+                if span_index >= spans.len() || spans[span_index].as_ref().unwrap().1 {
+                    break;
                 }
-                Span::raw(span.0.to_owned())
-            })
-            .collect::<Vec<Span>>(),
-    ))
+            }
+
+            lines.push(Line::from(spans_on_same_line));
+        }
+        lines
+    };
+
+    Text::from(lines)
 }
 
 pub fn beatify_enclosed_json(log: &str) -> Option<String> {
@@ -157,3 +203,4 @@ pub fn beatify_enclosed_json(log: &str) -> Option<String> {
     }
     None
 }
+

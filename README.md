@@ -24,8 +24,8 @@ sudo apt-get install librust-gdk-sys-dev
 ```
 
 ## Features
-- Filtering log entires by keyword
-- Searching log entries by keyword + highlighting matches
+- Filtering log entires by multiple comma-separated keywords
+- Searching log entries by multiple comma-separated keywords
 - Viewing entries combined from multiple log files ordered by log date
 - Ability to tail log files in real time
 - Copying log entries to clipboard (Windows-only)
@@ -47,7 +47,10 @@ Only UTF-8 encoded logs are supported currently. The following formats are suppo
 | Enable/disable tailing | `t` |
 | Exit the current view / Remove focus from the currently focused input field | `Esc` / `<C-c>`|
 | Filter log entries using a keyword | `f` |
+| Go to the end of the file | `<S-G>` or `End` | 
 | Go to the next / previous search match (when no input field is focused) | `n` / `p` | 
+| Go to the next / previous search match (when the search input field is focused) | `Up` / `Down` arrow keys | 
+| Go to the start of the file | `gg` or `Home` | 
 | Search for log entires using a keyword | `s` |
 | Show a file picker to open a new log file in a new tab (only supported in GUI environments) | `o` |
 

@@ -51,7 +51,9 @@ Only UTF-8 encoded logs are supported currently. The following formats are suppo
 | Go to the end of the file | `<S-G>` or `End` | 
 | Go to the next / previous search match (when no input field is focused) | `n` / `p` | 
 | Go to the next / previous search match (when the search input field is focused) | `Up` / `Down` arrow keys | 
+| Go to the previous view | `b` / `Esc` / `RightClick` |
 | Go to the start of the file | `gg` or `Home` | 
+| Quit the application | `q` |
 | Search for log entires using multiple comma-separated keywords | `s` |
 | Show a file picker to open a new log file in a new tab (only supported in GUI environments) | `o` |
 

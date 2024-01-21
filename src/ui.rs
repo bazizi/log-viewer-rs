@@ -110,15 +110,18 @@ pub fn render(f: &mut Frame, app: &mut App) {
             log_text = json_beautified;
         }
 
-        let t = ratatui::widgets::Paragraph::new(log_text)
-            .block(
-                Block::default()
-                    .title(" [Log entry] ")
-                    .title_alignment(ratatui::layout::Alignment::Center)
-                    .borders(Borders::TOP | Borders::BOTTOM),
-            )
-            .style(Style::default().fg(Color::White).bg(Color::Black))
-            .wrap(Wrap { trim: false });
+        let t = ratatui::widgets::Paragraph::new(highlight_keywords_in_text(
+            &log_text,
+            app.search_input_text().text(),
+        ))
+        .block(
+            Block::default()
+                .title(" [Log entry] ")
+                .title_alignment(ratatui::layout::Alignment::Center)
+                .borders(Borders::TOP | Borders::BOTTOM),
+        )
+        .style(Style::default().fg(Color::White).bg(Color::Black))
+        .wrap(Wrap { trim: false });
         f.render_widget(t, item_view_area);
         return;
     }
@@ -318,3 +321,4 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     *app.table_view_state_mut().state_mut() = state;
 }
+

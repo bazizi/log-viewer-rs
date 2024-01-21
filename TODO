@@ -1,4 +1,5 @@
 - Bugfix: Copying multiline log entries
 - Persist search & filter
+- scrolling JSON view for larger JSON content 
 - Open file using active instance of the app (if any)
 - Add updater

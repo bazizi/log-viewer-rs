@@ -1,2 +1,4 @@
 - Bugfix: Copying multiline log entries
+- Persist search & filter
+- Open file using active instance of the app (if any)
 - Add updater

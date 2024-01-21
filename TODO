@@ -1,6 +1,4 @@
-- Add updater
-- Automated release
 - Bugfix: Copying multiline log entries
-- Move by half a page
-- Open file using active instance of the app (if any)
 - Persist search & filter
+- Open file using active instance of the app (if any)
+- Add updater

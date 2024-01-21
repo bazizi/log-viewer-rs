@@ -20,6 +20,15 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
   
+
+    - uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          *.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
   build-ubuntu:
     runs-on: ubuntu-latest
 
@@ -31,3 +40,12 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+
+
+    - uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          log-viewer-rs
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

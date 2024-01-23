@@ -613,6 +613,8 @@ impl App {
                 0
             };
         }
+
+        self.reload_combined_tab();
     }
 
     pub fn selected_log_entry_in_text(&self) -> String {

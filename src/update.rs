@@ -7,6 +7,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventK
 use crate::event::Event;
 use anyhow::Result;
 
+use crate::utils::beatify_enclosed_json;
 use log::info;
 
 pub fn update(events: &EventHandler, app: Arc<Mutex<App>>) -> Result<()> {
@@ -236,11 +237,16 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
             app.set_tail_enabled(!app.tail_enabled());
         }
         KeyCode::Char('c') => {
-            // temporary hack: remove pipe operators as escaping them doesn't work in CMD
-            copy_to_clipboard(
-                &app.selected_log_entry_in_text()
-                    .replace(['>', '<', '|'], ""),
-            );
+            let mut log_text = app.selected_log_entry_in_text();
+
+            if matches!(app.view_mode().back(), Some(ViewMode::TableItem(_))) {
+                // If they copy the text from the table item view, we copy pretified JSON because
+                // that's what the table item view shows
+                if let Some(json_beautified) = beatify_enclosed_json(&log_text) {
+                    log_text = json_beautified;
+                }
+            }
+            copy_to_clipboard(&log_text);
             *app.copying_to_clipboard_mut() = true;
         }
         KeyCode::Char('n') => {

@@ -255,16 +255,10 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
     }
 }
 
-#[cfg(target_os = "linux")]
-fn copy_to_clipboard(_log_str: &str) {
-    unimplemented!();
-}
-
-#[cfg(target_os = "windows")]
 fn copy_to_clipboard(log_str: &str) {
-    std::process::Command::new("cmd")
-        .args(["/C", format!("echo {log_str} | clip.exe").as_str()])
-        .output()
-        .unwrap();
-}
+    use copypasta::ClipboardProvider;
 
+    if let Ok(mut ctx) = copypasta::ClipboardContext::new() {
+        ctx.set_contents(log_str.to_owned()).unwrap();
+    }
+}

@@ -19,7 +19,6 @@ use serde_json::{json, Value};
 use std::io::prelude::Write;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
-const DEFAULT_SKIP_SIZE: usize = 5;
 const COMBINED_TAB_INDEX: usize = 0;
 const CONFIG_FILE_NAME: &str = "log-viewer-rs-config.json";
 
@@ -423,6 +422,7 @@ impl App {
         }
 
         {
+            let view_buffer_size = self.view_buffer_size();
             let num_items = self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .data
@@ -430,7 +430,10 @@ impl App {
             let index = &mut self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index;
-            *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
+            *index = std::cmp::min(
+                index.saturating_add(view_buffer_size / 2 + 1),
+                num_items - 1,
+            );
         }
 
         self.table_view_state
@@ -449,10 +452,11 @@ impl App {
         }
 
         {
+            let view_buffer_size = self.view_buffer_size();
             let index = &mut self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index;
-            *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
+            *index = std::cmp::max(index.saturating_sub(view_buffer_size / 2 + 1), 0);
         }
 
         self.table_view_state

@@ -714,7 +714,7 @@ impl Drop for App {
         let serialized = json!({"tabs": self.tabs().iter()
         .filter(|tab| !tab.file_path.is_empty())
         .map(|tab|{
-        tab.file_path.clone()
+        tab.file_path.replace("\\\\", "\\").clone()
         }).collect::<Vec<String>>()});
         let mut config_file = std::fs::File::create(CONFIG_FILE_NAME).unwrap();
 

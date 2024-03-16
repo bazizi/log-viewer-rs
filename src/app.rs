@@ -19,7 +19,6 @@ use serde_json::{json, Value};
 use std::io::prelude::Write;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
-const DEFAULT_SKIP_SIZE: usize = 5;
 const COMBINED_TAB_INDEX: usize = 0;
 const CONFIG_FILE_NAME: &str = "log-viewer-rs-config.json";
 
@@ -99,6 +98,9 @@ impl App {
                 .collect::<Vec<Tab>>(),
         );
 
+        let mut search_input_text = String::new();
+        let mut filter_input_text = String::new();
+
         // Load config file saved the last session before exit
         if let Ok(mut config_file) = std::fs::File::open(CONFIG_FILE_NAME) {
             let mut str_config_file = String::new();
@@ -130,6 +132,14 @@ impl App {
                         })
                         .collect::<Vec<Tab>>(),
                 );
+                filter_input_text = json_config_file["filter_input_text"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string();
+                search_input_text = json_config_file["search_input_text"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string();
             }
         }
 
@@ -143,8 +153,8 @@ impl App {
             tabs,
             selected_tab_index: 0,
             selected_input: None,
-            filter_input_text: InputTextElement::new("".to_string()),
-            search_input_text: InputTextElement::new("".to_string()),
+            filter_input_text: InputTextElement::new(filter_input_text),
+            search_input_text: InputTextElement::new(search_input_text),
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
             copying_to_clipboard: false,
@@ -423,6 +433,7 @@ impl App {
         }
 
         {
+            let view_buffer_size = self.view_buffer_size();
             let num_items = self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .data
@@ -430,7 +441,10 @@ impl App {
             let index = &mut self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index;
-            *index = std::cmp::min(index.saturating_add(DEFAULT_SKIP_SIZE), num_items - 1);
+            *index = std::cmp::min(
+                index.saturating_add(view_buffer_size / 2 + 1),
+                num_items - 1,
+            );
         }
 
         self.table_view_state
@@ -449,10 +463,11 @@ impl App {
         }
 
         {
+            let view_buffer_size = self.view_buffer_size();
             let index = &mut self.tabs[self.selected_tab_index]
                 .filtered_view_items
                 .selected_item_index;
-            *index = std::cmp::max(index.saturating_sub(DEFAULT_SKIP_SIZE), 0);
+            *index = std::cmp::max(index.saturating_sub(view_buffer_size / 2 + 1), 0);
         }
 
         self.table_view_state
@@ -707,11 +722,16 @@ impl App {
 
 impl Drop for App {
     fn drop(&mut self) {
-        let serialized = json!({"tabs": self.tabs().iter()
-        .filter(|tab| !tab.file_path.is_empty())
-        .map(|tab|{
-        tab.file_path.clone()
-        }).collect::<Vec<String>>()});
+        let serialized = json!(
+        {
+            "tabs": self.tabs().iter()
+            .filter(|tab| !tab.file_path.is_empty())
+            .map(|tab|{
+            tab.file_path.replace("\\\\", "\\").clone()
+            }).collect::<Vec<String>>(),
+            "search_input_text": self.search_input_text().text(),
+            "filter_input_text": self.filter_input_text().text()
+        });
         let mut config_file = std::fs::File::create(CONFIG_FILE_NAME).unwrap();
 
         println!("Serializing config ..");

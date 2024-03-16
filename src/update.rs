@@ -217,7 +217,16 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
         KeyCode::Up | KeyCode::Char('k') => app.previous(None),
         KeyCode::Char('}') | KeyCode::PageDown => app.skipping_next(),
         KeyCode::Char('{') | KeyCode::PageUp => app.skipping_prev(),
-
+        KeyCode::Char('d') | KeyCode::Char('D') => {
+            if key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL {
+                app.skipping_next();
+            }
+        }
+        KeyCode::Char('u') | KeyCode::Char('U') => {
+            if key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL {
+                app.skipping_prev();
+            }
+        }
         KeyCode::Char('f') => {
             if app.tabs().is_empty() {
                 return;

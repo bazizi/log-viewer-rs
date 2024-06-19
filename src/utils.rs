@@ -97,8 +97,8 @@ where
     spans_ret
 }
 
-pub fn highlight_keywords_in_text<'a>(text: &'a str, keywords: &'a str) -> Text<'a> {
-    let text_spans = highlight_search_matches(text, keywords);
+pub fn highlight_keywords_in_text(text: &str, keywords: String) -> Text<'_> {
+    let text_spans = highlight_search_matches(text, &keywords);
     let mut text_spans = highlight_chars(|chr| chr.is_numeric(), text_spans, TextStyle::Digit);
     text_spans = highlight_chars(
         |chr| {
@@ -203,4 +203,3 @@ pub fn beatify_enclosed_json(log: &str) -> Option<String> {
     }
     None
 }
-

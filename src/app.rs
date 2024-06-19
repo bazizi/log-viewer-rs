@@ -8,9 +8,9 @@ use rfd::FileDialog;
 
 use crate::parser;
 use crate::parser::LogEntryIndices;
+use crate::thirdparty::input::Input;
 use log::info;
 
-use crate::input_element::InputTextElement;
 use crate::tab::Tab;
 use crate::tab::TabType;
 use crate::tab::TableItems;
@@ -64,8 +64,8 @@ pub struct App {
     selected_tab_index: usize,
     view_mode: VecDeque<ViewMode>,
     selected_input: Option<SelectedInput>,
-    filter_input_text: InputTextElement,
-    search_input_text: InputTextElement,
+    filter_input_text: Input,
+    search_input_text: Input,
     view_buffer_size: usize,
     tail_enabled: bool,
     copying_to_clipboard: bool,
@@ -153,8 +153,8 @@ impl App {
             tabs,
             selected_tab_index: 0,
             selected_input: None,
-            filter_input_text: InputTextElement::new(filter_input_text),
-            search_input_text: InputTextElement::new(search_input_text),
+            filter_input_text: Input::new(filter_input_text),
+            search_input_text: Input::new(search_input_text),
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
             tail_enabled: false,
             copying_to_clipboard: false,
@@ -527,7 +527,7 @@ impl App {
             return;
         }
 
-        if !self.filter_input_text.text().is_empty() {
+        if !self.filter_input_text.value().is_empty() {
             self.view_mode.push_back(ViewMode::TableItem(
                 self.tabs[self.selected_tab_index]
                     .filtered_view_items
@@ -643,19 +643,19 @@ impl App {
         log_entry
     }
 
-    pub fn filter_input_text(&self) -> &InputTextElement {
+    pub fn filter_input_text(&self) -> &Input {
         &self.filter_input_text
     }
 
-    pub fn filter_input_text_mut(&mut self) -> &mut InputTextElement {
+    pub fn filter_input_text_mut(&mut self) -> &mut Input {
         &mut self.filter_input_text
     }
 
-    pub fn search_input_text(&self) -> &InputTextElement {
+    pub fn search_input_text(&self) -> &Input {
         &self.search_input_text
     }
 
-    pub fn search_input_text_mut(&mut self) -> &mut InputTextElement {
+    pub fn search_input_text_mut(&mut self) -> &mut Input {
         &mut self.search_input_text
     }
 
@@ -729,8 +729,8 @@ impl Drop for App {
             .map(|tab|{
             tab.file_path.replace("\\\\", "\\").clone()
             }).collect::<Vec<String>>(),
-            "search_input_text": self.search_input_text().text(),
-            "filter_input_text": self.filter_input_text().text()
+            "search_input_text": self.search_input_text().to_string(),
+            "filter_input_text": self.filter_input_text().to_string()
         });
         let mut config_file = std::fs::File::create(CONFIG_FILE_NAME).unwrap();
 

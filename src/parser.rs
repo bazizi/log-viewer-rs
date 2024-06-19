@@ -30,7 +30,7 @@ pub enum LogEntryIndices {
     Log,
 }
 
-fn parse_log_vec(lines: &Vec<&str>, log_path: &str) -> Vec<Vec<String>> {
+fn parse_log_vec(lines: &[&str], log_path: &str) -> Vec<Vec<String>> {
     let mut line_num = 0;
     let mut _session = 0;
     let mut log_entries = Vec::<Vec<String>>::new();
@@ -68,7 +68,7 @@ fn parse_log_vec(lines: &Vec<&str>, log_path: &str) -> Vec<Vec<String>> {
         let _pid = &captures.name("pid").map_or("", |m| m.as_str());
         let _tid = &captures.name("tid").map_or("", |m| m.as_str());
         let level = &captures.name("level").map_or("", |m| m.as_str());
-        log += &captures.name("log").map_or("", |m| m.as_str());
+        log += captures.name("log").map_or("", |m| m.as_str());
 
         loop {
             // Deal with multiline log entries where only the 1st line matches the regex.

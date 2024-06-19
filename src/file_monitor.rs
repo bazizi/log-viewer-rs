@@ -90,7 +90,7 @@ impl FileMonitor {
             }
 
             if any_tabs_updated {
-                let filter_text = app.lock().unwrap().filter_input_text().text().clone();
+                let filter_text = app.lock().unwrap().filter_input_text().to_string().clone();
                 let mut app = app.lock().unwrap();
                 app.filter_by_current_input(filter_text);
                 sender.send(Event::Tick).unwrap();

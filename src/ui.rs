@@ -78,7 +78,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
             if (menu[i].starts_with(TAIL_PREFIX) && (app.tail_enabled()))
                 || (menu[i].starts_with(FILTER_PREFIX)
-                    && (!app.filter_input_text().text().is_empty()))
+                    && (!app.filter_input_text().to_string().is_empty()))
                 || (menu[i].starts_with(SEARCH_PREFIX) && search_focused)
                 || (menu[i].starts_with(COPY_PREFIX) && app.copying_to_clipboard())
             {
@@ -110,18 +110,16 @@ pub fn render(f: &mut Frame, app: &mut App) {
             log_text = json_beautified;
         }
 
-        let t = ratatui::widgets::Paragraph::new(highlight_keywords_in_text(
-            &log_text,
-            app.search_input_text().text(),
-        ))
-        .block(
-            Block::default()
-                .title(" [Log entry] ")
-                .title_alignment(ratatui::layout::Alignment::Center)
-                .borders(Borders::TOP | Borders::BOTTOM),
-        )
-        .style(Style::default().fg(Color::White).bg(Color::Black))
-        .wrap(Wrap { trim: false });
+        let input_str = app.search_input_text().to_string();
+        let t = ratatui::widgets::Paragraph::new(highlight_keywords_in_text(&log_text, input_str))
+            .block(
+                Block::default()
+                    .title(" [Log entry] ")
+                    .title_alignment(ratatui::layout::Alignment::Center)
+                    .borders(Borders::TOP | Borders::BOTTOM),
+            )
+            .style(Style::default().fg(Color::White).bg(Color::Black))
+            .wrap(Wrap { trim: false });
         f.render_widget(t, item_view_area);
         return;
     }
@@ -144,17 +142,15 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .clone()
     };
 
-    let preview = Paragraph::new(highlight_keywords_in_text(
-        &text,
-        app.search_input_text().text(),
-    ))
-    .wrap(Wrap { trim: false })
-    .block(
-        Block::default()
-            .borders(Borders::TOP | Borders::BOTTOM)
-            .title(" [Preview] ")
-            .title_alignment(ratatui::layout::Alignment::Center),
-    );
+    let input_str = app.search_input_text().to_string();
+    let preview = Paragraph::new(highlight_keywords_in_text(&text, input_str))
+        .wrap(Wrap { trim: false })
+        .block(
+            Block::default()
+                .borders(Borders::TOP | Borders::BOTTOM)
+                .title(" [Preview] ")
+                .title_alignment(ratatui::layout::Alignment::Center),
+        );
     f.render_widget(preview, preview_area);
 
     let input_area = Layout::default()
@@ -166,21 +162,21 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     if let Some(SelectedInput::Filter) = &app.selected_input() {
         f.set_cursor(
-            filter_area.x + (app.filter_input_text().cursor_position() as u16) + 2,
+            filter_area.x + (app.filter_input_text().cursor() as u16) + 1,
             filter_area.y + 1,
         );
     } else if let Some(SelectedInput::Search) = &app.selected_input() {
         f.set_cursor(
-            search_area.x + (app.search_input_text().cursor_position() as u16) + 2,
+            search_area.x + (app.search_input_text().cursor() as u16) + 1,
             search_area.y + 1,
         );
     }
 
-    let filter = Paragraph::new(app.filter_input_text().text().clone())
+    let filter = Paragraph::new(app.filter_input_text().to_string().clone())
         .block(Block::default().borders(Borders::ALL).title("[F]ilter"));
     f.render_widget(filter, filter_area);
 
-    let search = Paragraph::new(app.search_input_text().text().clone())
+    let search = Paragraph::new(app.search_input_text().to_string().clone())
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
@@ -238,10 +234,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
                     LogEntryIndices::Date as usize
                 };
             let cells = item[starting_cell..item.len()].iter().map(|c: &String| {
-                Cell::from(highlight_keywords_in_text(
-                    c,
-                    app.search_input_text().text(),
-                ))
+                let input_str = app.search_input_text().to_string();
+                Cell::from(highlight_keywords_in_text(c, input_str))
             });
             let row = Row::new(cells).height(height as u16);
             let color = match item[LogEntryIndices::Level as usize].as_str() {
@@ -321,4 +315,3 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     *app.table_view_state_mut().state_mut() = state;
 }
-

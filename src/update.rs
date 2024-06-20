@@ -1,6 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use crate::{app::SelectedInput, event::EventHandler, tab::TabType, App, ViewMode};
+use crate::{
+    app::SelectedInput,
+    event::EventHandler,
+    tab::TabType,
+    thirdparty::input::{Input, InputRequest},
+    App, ViewMode,
+};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind};
 
@@ -80,19 +86,12 @@ fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mu
                     }
                     return;
                 }
-                app.filter_input_text_mut().add_char(c);
-                app.filter_by_current_input(app.filter_input_text().text().clone());
+                handle_common_input(app.filter_input_text_mut(), key_code, key_modifiers);
+                app.filter_by_current_input(app.filter_input_text().to_string().clone());
             }
             KeyCode::Backspace => {
-                if key_modifiers == KeyModifiers::CONTROL {
-                    app.filter_input_text_mut().clear();
-                } else {
-                    app.filter_input_text_mut().remove_char();
-                }
-                app.filter_by_current_input(app.filter_input_text().text().clone());
-            }
-            KeyCode::Delete => {
-                app.filter_input_text_mut().delete_char();
+                handle_common_input(app.filter_input_text_mut(), key_code, key_modifiers);
+                app.filter_by_current_input(app.filter_input_text().to_string().clone());
             }
             KeyCode::Enter => app.switch_to_item_view(),
 
@@ -100,13 +99,8 @@ fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mu
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
             KeyCode::Down => app.next(None),
             KeyCode::Up => app.previous(None),
-            KeyCode::Left => app.filter_input_text_mut().cursor_left(),
-            KeyCode::Right => app.filter_input_text_mut().cursor_right(),
             KeyCode::PageDown => app.skipping_next(),
             KeyCode::PageUp => app.skipping_prev(),
-            KeyCode::Home => app.start(),
-            KeyCode::End => app.end(),
-
             KeyCode::Esc => {
                 if let Some(ViewMode::TableItem(_)) = app.view_mode().back() {
                     app.view_mode_mut().pop_back();
@@ -115,9 +109,53 @@ fn handle_filtered_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mu
                 }
             }
             _ => {
-                app.filter_by_current_input(app.filter_input_text().text().clone());
+                handle_common_input(app.filter_input_text_mut(), key_code, key_modifiers);
+                app.filter_by_current_input(app.filter_input_text().to_string().clone());
             }
         }
+    }
+}
+
+fn handle_common_input(input_element: &mut Input, key_code: KeyCode, key_modifiers: KeyModifiers) {
+    match key_code {
+        KeyCode::Char(c) => {
+            input_element.handle(InputRequest::InsertChar(c));
+        }
+        KeyCode::Backspace => {
+            if key_modifiers == KeyModifiers::CONTROL {
+                input_element.handle(InputRequest::DeletePrevWord);
+            } else {
+                input_element.handle(InputRequest::DeletePrevChar);
+            }
+        }
+        KeyCode::Delete => {
+            if key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL {
+                input_element.handle(InputRequest::DeleteNextWord);
+            } else {
+                input_element.handle(InputRequest::DeleteNextChar);
+            }
+        }
+        KeyCode::Left => {
+            if key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL {
+                input_element.handle(InputRequest::GoToPrevWord);
+            } else {
+                input_element.handle(InputRequest::GoToPrevChar);
+            }
+        }
+        KeyCode::Right => {
+            if key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL {
+                input_element.handle(InputRequest::GoToNextWord);
+            } else {
+                input_element.handle(InputRequest::GoToNextChar);
+            }
+        }
+        KeyCode::Home => {
+            input_element.handle(InputRequest::GoToStart);
+        }
+        KeyCode::End => {
+            input_element.handle(InputRequest::GoToEnd);
+        }
+        _ => {}
     }
 }
 
@@ -133,40 +171,28 @@ fn handle_search_mode(key_code: KeyCode, key_modifiers: KeyModifiers, app: &mut 
                     app.view_mode_mut().pop_back();
                     return;
                 }
-                app.search_input_text_mut().add_char(c);
-            }
-            KeyCode::Backspace => {
-                if key_modifiers & KeyModifiers::CONTROL == KeyModifiers::CONTROL {
-                    app.search_input_text_mut().clear();
-                } else {
-                    app.search_input_text_mut().remove_char();
-                }
-            }
-            KeyCode::Delete => {
-                app.search_input_text_mut().delete_char();
+                handle_common_input(app.search_input_text_mut(), key_code, key_modifiers);
             }
             // Arrow keys to select filtered items
             // We can't support Vim style bindings in this mode because the users might actually be typing j, k, etc.
-            KeyCode::Down => app.next(Some(app.search_input_text().text().clone())),
-            KeyCode::Up => app.previous(Some(app.search_input_text().text().clone())),
+            KeyCode::Down => app.next(Some(app.search_input_text().to_string().clone())),
+            KeyCode::Up => app.previous(Some(app.search_input_text().to_string().clone())),
             KeyCode::Enter => {
                 if key_modifiers & KeyModifiers::SHIFT == KeyModifiers::SHIFT {
-                    app.previous(Some(app.search_input_text().text().clone()));
+                    app.previous(Some(app.search_input_text().to_string().clone()));
                 } else if key_modifiers == KeyModifiers::NONE {
-                    app.next(Some(app.search_input_text().text().clone()));
+                    app.next(Some(app.search_input_text().to_string().clone()));
                 }
             }
-            KeyCode::Left => app.search_input_text_mut().cursor_left(),
-            KeyCode::Right => app.search_input_text_mut().cursor_right(),
             KeyCode::PageDown => app.skipping_next(),
             KeyCode::PageUp => app.skipping_prev(),
-            KeyCode::Home => app.start(),
-            KeyCode::End => app.end(),
             KeyCode::Esc => {
                 *app.selected_input_mut() = None;
                 app.view_mode_mut().pop_back();
             }
-            _ => {}
+            _ => {
+                handle_common_input(app.search_input_text_mut(), key_code, key_modifiers);
+            }
         }
     }
 }
@@ -260,11 +286,11 @@ fn handle_normal_mode(key_code: KeyCode, app: &mut App, key_modifiers: KeyModifi
         }
         KeyCode::Char('n') => {
             // vim style iteration through search matches (go to next match)
-            app.next(Some(app.search_input_text().text().clone()));
+            app.next(Some(app.search_input_text().to_string().clone()));
         }
         KeyCode::Char('p') => {
             // vim style iteration through search matches (go to previous match)
-            app.previous(Some(app.search_input_text().text().clone()));
+            app.previous(Some(app.search_input_text().to_string().clone()));
         }
         _ => {}
     }

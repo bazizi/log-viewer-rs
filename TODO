@@ -1,6 +1,2 @@
-- Bugfix: Copying multiline log entries
-- Persist search & filter
-- Key binding to move to prev/next page
-- scrolling JSON view for larger JSON content 
 - Open file using active instance of the app (if any)
 - Add updater

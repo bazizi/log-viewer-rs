@@ -35,7 +35,7 @@ mod tab;
 mod file_monitor;
 use file_monitor::FileMonitor;
 
-mod input_element;
+mod thirdparty;
 mod utils;
 
 const FPS: u64 = 60;

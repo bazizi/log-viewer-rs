@@ -143,14 +143,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
     };
 
     let input_str = app.search_input_text().to_string();
-    let preview = Paragraph::new(highlight_keywords_in_text(&text, input_str))
-        .wrap(Wrap { trim: false })
-        .block(
-            Block::default()
-                .borders(Borders::TOP | Borders::BOTTOM)
-                .title(" [Preview] ")
-                .title_alignment(ratatui::layout::Alignment::Center),
-        );
+    let text = highlight_keywords_in_text(&text, input_str);
+
+    let preview = Paragraph::new(text).wrap(Wrap { trim: true }).block(
+        Block::default()
+            .borders(Borders::TOP | Borders::BOTTOM)
+            .title(" [Preview] ")
+            .title_alignment(ratatui::layout::Alignment::Center),
+    );
     f.render_widget(preview, preview_area);
 
     let input_area = Layout::default()
@@ -172,11 +172,11 @@ pub fn render(f: &mut Frame, app: &mut App) {
         );
     }
 
-    let filter = Paragraph::new(app.filter_input_text().to_string().clone())
+    let filter = Paragraph::new(app.filter_input_text().to_string())
         .block(Block::default().borders(Borders::ALL).title("[F]ilter"));
     f.render_widget(filter, filter_area);
 
-    let search = Paragraph::new(app.search_input_text().to_string().clone())
+    let search = Paragraph::new(app.search_input_text().to_string())
         .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
@@ -268,7 +268,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .to_vec()
     };
 
-    let t = Table::new(rows)
+    let t = Table::new(rows, column_widts.clone())
         .header(header)
         .block(
             Block::default()

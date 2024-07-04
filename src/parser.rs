@@ -68,7 +68,9 @@ fn parse_log_vec(lines: &[&str], log_path: &str) -> Vec<Vec<String>> {
         let _pid = &captures.name("pid").map_or("", |m| m.as_str());
         let _tid = &captures.name("tid").map_or("", |m| m.as_str());
         let level = &captures.name("level").map_or("", |m| m.as_str());
-        log += captures.name("log").map_or("", |m| m.as_str());
+        log += &captures
+            .name("log")
+            .map_or("".to_owned(), |m| m.as_str().replace('\t', "    "));
 
         loop {
             // Deal with multiline log entries where only the 1st line matches the regex.

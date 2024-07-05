@@ -16,27 +16,30 @@ use ratatui::{
 
 use crate::utils::{beatify_enclosed_json, highlight_keywords_in_text};
 
+const DEFAULT_BG_COLOR: Color = Color::DarkGray;
+const DEFAULT_HIGHLIGHT_COLOR: Color = Color::LightMagenta;
+
 pub fn render(f: &mut Frame, app: &mut App) {
     let is_in_table_item_mode = matches!(app.view_mode().back(), Some(ViewMode::TableItem(_)));
 
     let areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints(if is_in_table_item_mode {
-            [Constraint::Length(3), Constraint::Percentage(100)].as_ref()
+            [Constraint::Percentage(100), Constraint::Length(1)].as_ref()
         } else {
             [
-                Constraint::Length(3),      // top menu area
                 Constraint::Length(3),      // search/filter
                 Constraint::Length(3),      // Tabs
                 Constraint::Percentage(10), // preview
-                Constraint::Percentage(85), // table
+                Constraint::Percentage(90), // table
+                Constraint::Length(1),      // bottom menu area
             ]
             .as_ref()
         })
         .split(f.size());
 
     {
-        let menu_area = areas[0];
+        let menu_area = areas[areas.len() - 1];
         const TAIL_PREFIX: &str = "[t]ail ";
         const FILTER_PREFIX: &str = "[f]ilter";
         const SEARCH_PREFIX: &str = "[s]earch";
@@ -71,8 +74,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
         for i in 0..menu.len() {
             let mut menu_item = Paragraph::new(menu[i])
-                .block(Block::default().borders(Borders::ALL))
-                .alignment(ratatui::layout::Alignment::Center);
+                .block(Block::default().borders(Borders::NONE))
+                .alignment(ratatui::layout::Alignment::Center)
+                .bg(DEFAULT_BG_COLOR);
 
             let search_focused = matches!(app.selected_input(), Some(SelectedInput::Search));
 
@@ -82,7 +86,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 || (menu[i].starts_with(SEARCH_PREFIX) && search_focused)
                 || (menu[i].starts_with(COPY_PREFIX) && app.copying_to_clipboard())
             {
-                menu_item = menu_item.on_green();
+                menu_item = menu_item.bg(DEFAULT_HIGHLIGHT_COLOR);
             }
 
             f.render_widget(menu_item, menu_item_area[i]);
@@ -102,7 +106,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             return;
         }
 
-        let item_view_area = areas[1];
+        let item_view_area = areas[0];
 
         let mut log_text = app.selected_log_entry_in_text();
 
@@ -118,13 +122,13 @@ pub fn render(f: &mut Frame, app: &mut App) {
                     .title_alignment(ratatui::layout::Alignment::Center)
                     .borders(Borders::TOP | Borders::BOTTOM),
             )
-            .style(Style::default().fg(Color::White).bg(Color::Black))
+            .style(Style::default().fg(Color::White).bg(DEFAULT_BG_COLOR))
             .wrap(Wrap { trim: false });
         f.render_widget(t, item_view_area);
         return;
     }
 
-    let (tabs_area, preview_area, table_area) = (areas[2], areas[3], areas[4]);
+    let (tabs_area, preview_area, table_area) = (areas[1], areas[2], areas[3]);
     *app.table_view_state_mut().position_mut() = Some((table_area.left(), table_area.top()));
 
     let text = if app.tabs()[app.selected_tab_index()]
@@ -145,39 +149,47 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let input_str = app.search_input_text().to_string();
     let text = highlight_keywords_in_text(&text, input_str);
 
-    let preview = Paragraph::new(text).wrap(Wrap { trim: true }).block(
-        Block::default()
-            .borders(Borders::TOP | Borders::BOTTOM)
-            .title(" [Preview] ")
-            .title_alignment(ratatui::layout::Alignment::Center),
-    );
+    let preview = Paragraph::new(text)
+        .wrap(Wrap { trim: true })
+        .block(
+            Block::default()
+                .borders(Borders::TOP | Borders::BOTTOM)
+                .title(" [Preview] ")
+                .title_alignment(ratatui::layout::Alignment::Center),
+        )
+        .bg(DEFAULT_BG_COLOR);
     f.render_widget(preview, preview_area);
 
     let input_area = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-        .split(areas[1]);
+        .split(areas[0]);
 
     let (filter_area, search_area) = (input_area[0], input_area[1]);
+
+    let mut filter = Paragraph::new(app.filter_input_text().to_string())
+        .block(Block::default().borders(Borders::ALL).title("[F]ilter"))
+        .bg(DEFAULT_BG_COLOR);
+
+    let mut search = Paragraph::new(app.search_input_text().to_string())
+        .block(Block::default().borders(Borders::ALL).title("[S]earch"))
+        .bg(DEFAULT_BG_COLOR);
 
     if let Some(SelectedInput::Filter) = &app.selected_input() {
         f.set_cursor(
             filter_area.x + (app.filter_input_text().cursor() as u16) + 1,
             filter_area.y + 1,
         );
+        filter = filter.bg(DEFAULT_HIGHLIGHT_COLOR);
     } else if let Some(SelectedInput::Search) = &app.selected_input() {
         f.set_cursor(
             search_area.x + (app.search_input_text().cursor() as u16) + 1,
             search_area.y + 1,
         );
+        search = search.bg(DEFAULT_HIGHLIGHT_COLOR);
     }
 
-    let filter = Paragraph::new(app.filter_input_text().to_string())
-        .block(Block::default().borders(Borders::ALL).title("[F]ilter"));
     f.render_widget(filter, filter_area);
-
-    let search = Paragraph::new(app.search_input_text().to_string())
-        .block(Block::default().borders(Borders::ALL).title("[S]earch"));
     f.render_widget(search, search_area);
 
     // Show the file name only in the combined tab
@@ -191,7 +203,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .iter()
         .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
     let header = Row::new(header_cells)
-        .style(Style::default().bg(Color::Cyan))
+        .style(Style::default().bg(DEFAULT_BG_COLOR))
         .height(1)
         .bottom_margin(0);
 
@@ -205,8 +217,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
     .style(Style::default().white())
     .highlight_style(Style::default().yellow())
     .divider(ratatui::symbols::bar::FULL)
-    .highlight_style(Style::default().on_cyan())
-    .select(app.selected_tab_index());
+    .highlight_style(Style::default().bg(DEFAULT_HIGHLIGHT_COLOR))
+    .select(app.selected_tab_index())
+    .bg(DEFAULT_BG_COLOR);
 
     f.render_widget(tabs, tabs_area);
 
@@ -241,7 +254,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             let color = match item[LogEntryIndices::Level as usize].as_str() {
                 "ERROR" => (Color::Red, Color::White),
                 "WARN" => (Color::LightYellow, Color::Black),
-                _ => (Color::Black, Color::White),
+                _ => (DEFAULT_BG_COLOR, Color::White),
             };
 
             row.style(Style::default().bg(color.0).fg(color.1))

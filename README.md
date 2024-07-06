@@ -3,6 +3,7 @@
 A log viewer with terminal UI.
 
 ![screenshot](res/screenshot.png "screenshot")
+![screenshot2](res/screenshot2.png "screenshot2")
 
 ## Build
 Install rustup and run:

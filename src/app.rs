@@ -678,7 +678,7 @@ impl App {
     pub fn handle_table_mouse_click(&mut self) {
         if let Some((_, table_position_top)) = *self.table_view_state().position() {
             let mouse_position_top = self.mouse_position().1;
-            let table_position_first_row = table_position_top + 2;
+            let table_position_first_row = table_position_top + 1;
 
             if mouse_position_top < table_position_first_row {
                 // mouse click is outside the table

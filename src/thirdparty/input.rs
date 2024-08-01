@@ -2,7 +2,6 @@
 ///
 /// Different backends can be used to convert events into requests.
 #[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum InputRequest {
     SetCursor(usize),
     InsertChar(char),
@@ -21,7 +20,6 @@ pub enum InputRequest {
 }
 
 #[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StateChanged {
     pub value: bool,
     pub cursor: bool,
@@ -42,7 +40,6 @@ pub type InputResponse = Option<StateChanged>;
 /// assert_eq!(input.to_string(), "Hello World");
 /// ```
 #[derive(Default, Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Input {
     value: String,
     cursor: usize,

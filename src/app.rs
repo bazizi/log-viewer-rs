@@ -100,6 +100,7 @@ impl App {
 
         let mut search_input_text = String::new();
         let mut filter_input_text = String::new();
+        let mut tail_enabled = false;
 
         // Load config file saved the last session before exit
         if let Ok(mut config_file) = std::fs::File::open(CONFIG_FILE_NAME) {
@@ -140,6 +141,9 @@ impl App {
                     .as_str()
                     .unwrap_or("")
                     .to_string();
+                tail_enabled = json_config_file["search_input_text"]
+                    .as_bool()
+                    .unwrap_or(false);
             }
         }
 
@@ -156,7 +160,7 @@ impl App {
             filter_input_text: Input::new(filter_input_text),
             search_input_text: Input::new(search_input_text),
             view_buffer_size: DEFAULT_VIEW_BUFFER_SIZE,
-            tail_enabled: false,
+            tail_enabled,
             copying_to_clipboard: false,
             mouse_position: (0, 0),
             last_key_input: None,
@@ -730,7 +734,8 @@ impl Drop for App {
             tab.file_path.replace("\\\\", "\\").clone()
             }).collect::<Vec<String>>(),
             "search_input_text": self.search_input_text().to_string(),
-            "filter_input_text": self.filter_input_text().to_string()
+            "filter_input_text": self.filter_input_text().to_string(),
+            "tail": self.tail_enabled(),
         });
         let mut config_file = std::fs::File::create(CONFIG_FILE_NAME).unwrap();
 

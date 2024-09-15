@@ -9,7 +9,7 @@ use crossterm::{
 use log::info;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{
-    env,
+    env, fs,
     io::{self, Write},
     sync::Arc,
     thread::{self, sleep},
@@ -48,6 +48,10 @@ mod utils;
 
 const FPS: u64 = 60;
 
+const CONFIGS_PATH: &str = "log-viewer-rs";
+const PORT_FILE: &str = "log_viewer_port";
+const LOCALHOST_IPV4: &str = "127.0.0.1";
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -62,10 +66,24 @@ fn main() -> Result<()> {
 fn startup() -> Result<()> {
     env_logger::init();
 
+    fs::create_dir_all(format!(
+        "{}/{}",
+        std::env::temp_dir().display(),
+        CONFIGS_PATH,
+    ))
+    .unwrap();
+
     info!("Reading port number from file...");
-    if let Ok(port_num) = std::fs::read_to_string("log_viewer_port") {
+    if let Ok(port_num) = std::fs::read_to_string(format!(
+        "{}/{}/{}",
+        std::env::temp_dir().display(),
+        CONFIGS_PATH,
+        PORT_FILE
+    )) {
         info!("Attempting connection to port {}", port_num);
-        if let Ok(mut conn) = std::net::TcpStream::connect(format!("127.0.0.1:{}", port_num)) {
+        if let Ok(mut conn) =
+            std::net::TcpStream::connect(format!("{}:{}", LOCALHOST_IPV4, port_num))
+        {
             info!("Successfully connected to port {}", port_num);
             let args = env::args();
             let args = args.into_iter().collect::<Vec<String>>();
@@ -120,9 +138,14 @@ fn run() -> Result<()> {
     let connections_thread = {
         let app_clone = Arc::clone(&app);
         thread::spawn(move || {
-            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let listener = std::net::TcpListener::bind(format!("{}:0", LOCALHOST_IPV4)).unwrap();
             std::fs::write(
-                "log_viewer_port",
+                format!(
+                    "{}/{}/{}",
+                    std::env::temp_dir().display(),
+                    CONFIGS_PATH,
+                    PORT_FILE
+                ),
                 listener.local_addr().unwrap().port().to_string(),
             )
             .unwrap();

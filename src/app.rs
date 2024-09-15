@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::Read;
 use std::ops::Range;
@@ -20,6 +21,7 @@ use std::io::prelude::Write;
 
 const DEFAULT_VIEW_BUFFER_SIZE: usize = 50;
 const COMBINED_TAB_INDEX: usize = 0;
+use crate::CONFIGS_PATH;
 const CONFIG_FILE_NAME: &str = "log-viewer-rs-config.json";
 
 pub enum SelectedInput {
@@ -103,7 +105,12 @@ impl App {
         let mut tail_enabled = false;
 
         // Load config file saved the last session before exit
-        if let Ok(mut config_file) = std::fs::File::open(CONFIG_FILE_NAME) {
+        if let Ok(mut config_file) = std::fs::File::open(format!(
+            "{}/{}/{}",
+            std::env::temp_dir().display(),
+            CONFIGS_PATH,
+            CONFIG_FILE_NAME
+        )) {
             let mut str_config_file = String::new();
             if config_file.read_to_string(&mut str_config_file).is_ok() {
                 let mut json_config_file: Value = serde_json::from_str(&str_config_file).unwrap();
@@ -141,12 +148,11 @@ impl App {
                     .as_str()
                     .unwrap_or("")
                     .to_string();
-                tail_enabled = json_config_file["search_input_text"]
-                    .as_bool()
-                    .unwrap_or(false);
+                tail_enabled = json_config_file["tail"].as_bool().unwrap_or(false);
             }
         }
 
+        let mut files = HashSet::new();
         let mut app = App {
             running: true,
             table_view_state: TableViewState {
@@ -154,7 +160,17 @@ impl App {
                 position: None,
             },
             view_mode: vec![ViewMode::Table].into(),
-            tabs,
+            tabs: tabs
+                .into_iter()
+                .filter(move |tab| {
+                    if files.contains(&tab.file_path) {
+                        return false;
+                    }
+
+                    files.insert(tab.file_path.clone());
+                    true
+                })
+                .collect::<Vec<Tab>>(),
             selected_tab_index: 0,
             selected_input: None,
             filter_input_text: Input::new(filter_input_text),
@@ -167,7 +183,6 @@ impl App {
         };
 
         app.reload_combined_tab();
-
         app
     }
 
@@ -737,7 +752,13 @@ impl Drop for App {
             "filter_input_text": self.filter_input_text().to_string(),
             "tail": self.tail_enabled(),
         });
-        let mut config_file = std::fs::File::create(CONFIG_FILE_NAME).unwrap();
+        let mut config_file = std::fs::File::create(format!(
+            "{}/{}/{}",
+            std::env::temp_dir().display(),
+            CONFIGS_PATH,
+            CONFIG_FILE_NAME
+        ))
+        .unwrap();
 
         println!("Serializing config ..");
         config_file

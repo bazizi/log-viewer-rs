@@ -68,7 +68,7 @@ fn startup() -> Result<()> {
 
     fs::create_dir_all(format!(
         "{}/{}",
-        std::env::temp_dir().display(),
+        std::env::var("LOCALAPPDATA").unwrap(),
         CONFIGS_PATH,
     ))
     .unwrap();
@@ -76,7 +76,7 @@ fn startup() -> Result<()> {
     info!("Reading port number from file...");
     if let Ok(port_num) = std::fs::read_to_string(format!(
         "{}/{}/{}",
-        std::env::temp_dir().display(),
+        std::env::var("LOCALAPPDATA").unwrap(),
         CONFIGS_PATH,
         PORT_FILE
     )) {
@@ -142,7 +142,7 @@ fn run() -> Result<()> {
             std::fs::write(
                 format!(
                     "{}/{}/{}",
-                    std::env::temp_dir().display(),
+                    std::env::var("LOCALAPPDATA").unwrap(),
                     CONFIGS_PATH,
                     PORT_FILE
                 ),

@@ -107,7 +107,7 @@ impl App {
         // Load config file saved the last session before exit
         if let Ok(mut config_file) = std::fs::File::open(format!(
             "{}/{}/{}",
-            std::env::temp_dir().display(),
+            std::env::var("LOCALAPPDATA").unwrap(),
             CONFIGS_PATH,
             CONFIG_FILE_NAME
         )) {
@@ -754,7 +754,7 @@ impl Drop for App {
         });
         let mut config_file = std::fs::File::create(format!(
             "{}/{}/{}",
-            std::env::temp_dir().display(),
+            std::env::var("LOCALAPPDATA").unwrap(),
             CONFIGS_PATH,
             CONFIG_FILE_NAME
         ))

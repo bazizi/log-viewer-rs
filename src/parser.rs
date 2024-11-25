@@ -17,7 +17,7 @@ lazy_static! {
         Regex::new(r#"^\s*\[(?P<date>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\]\s+(?P<log>.*)$"#).unwrap(),                                                // Steam
         Regex::new(r#"^\s*\[(?P<date>\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}:\d+)\][^\]]+\](?P<log>.*)$"#).unwrap(),                                    // Riot launcher (Valorant) + Epic games
         Regex::new(r#"^\s*\[(?P<date>[^:]+):(?P<level>\w+):[^\]]+\]\s*(?P<log>.*)$"#).unwrap(),                                                         // CEF
-        Regex::new(r#"^(?P<date>[^\s]+)\s+(?P<level>\w+)\s+(?P<log>.*)$"#).unwrap(),                                                         // NodeJS
+        Regex::new(r#"^(?P<date>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)\s+(?P<level>\w+)\s+(?P<log>.*)$"#).unwrap(),                                // NodeJS
     ];
 }
 

@@ -199,8 +199,8 @@ fn run() -> Result<()> {
     }
 
     connections_thread.join().unwrap();
-    file_monitor_thread.join();
-    events_thread.join();
+    file_monitor_thread.shutdown();
+    events_thread.shutdown();
 
     Ok(())
 }

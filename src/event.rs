@@ -83,7 +83,7 @@ impl EventHandler {
         Ok(self.receiver.recv()?)
     }
 
-    pub fn join(self) {
+    pub fn shutdown(self) {
         *self.running.lock().unwrap() = false;
         self.handler.join().unwrap();
     }

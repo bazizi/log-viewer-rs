@@ -100,7 +100,7 @@ impl FileMonitor {
         FileMonitor { handler, running }
     }
 
-    pub fn join(self) {
+    pub fn shutdown(self) {
         *self.running.lock().unwrap() = false;
         self.handler.join().unwrap();
     }

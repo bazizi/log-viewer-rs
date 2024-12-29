@@ -106,19 +106,19 @@ fn parse_log_vec(lines: &[&str], log_path: &str) -> Vec<Vec<String>> {
         }
 
         log_entries.push(vec![
-            std::path::Path::new(log_path)
-                .file_name()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default()
-                .to_string(),
-            // id.to_string(),
-            // _session.to_string(),
-            date.to_string(),
-            // pid.to_string(),
-            // tid.to_string(),
-            level.to_string(),
-            log.to_string(),
+                         std::path::Path::new(log_path)
+                         .file_name()
+                         .unwrap_or_default()
+                         .to_str()
+                         .unwrap_or_default()
+                         .to_string(),
+                         // id.to_string(),
+                         // _session.to_string(),
+                         date.to_string(),
+                         // pid.to_string(),
+                         // tid.to_string(),
+                         level.to_string(),
+                         log.to_string(),
         ]);
 
         line_num += 1;
@@ -128,7 +128,7 @@ fn parse_log_vec(lines: &[&str], log_path: &str) -> Vec<Vec<String>> {
         "found [{}] log _sessions in [{}]",
         log_entries.len(),
         log_path
-    );
+        );
 
     log_entries
 }
@@ -154,7 +154,7 @@ mod tests {
         parsed_result: &Vec<Vec<String>>,
         num_expected_lines: usize,
         num_expected_cols: usize,
-    ) {
+        ) {
         assert_eq!(parsed_result.len(), num_expected_lines);
         if num_expected_lines == 0 {
             return;
@@ -212,13 +212,13 @@ mod tests {
             "Process Information",                                                                // parser ignores this line
             "    PID: 1280",                                                                      // parser ignores this line
             "    EXE: C:\\Program Files\\Electronic Arts\\EA Desktop\\EA Desktop\\EADesktop.exe", // parser ignores this line
-            "STARTED: Sat, Dec 23 2023 02:16:02 AM",                                              // parser ignores this line
-            "an invalid line",
-            "WARN	02:16:02 AM (    0)	 8300         IGOTelemetry.cpp:   77		Unable to retrieve telemetry prod id",
-            "", // left empty on purpose to ensure the parser can handle empty lines gracefully
-            "WARN	02:16:02 AM (    0)	 8300         IGOTelemetry.cpp:   87		Unable to retrieve telemetry timestamp",
-            "another invalid line",
-            "WARN	02:16:02 AM (    3)	 8300              DllMain.cpp: 2191		isIGOSharedMemoryNew=1",
+        "STARTED: Sat, Dec 23 2023 02:16:02 AM",                                              // parser ignores this line
+        "an invalid line",
+        "WARN	02:16:02 AM (    0)	 8300         IGOTelemetry.cpp:   77		Unable to retrieve telemetry prod id",
+        "", // left empty on purpose to ensure the parser can handle empty lines gracefully
+        "WARN	02:16:02 AM (    0)	 8300         IGOTelemetry.cpp:   87		Unable to retrieve telemetry timestamp",
+        "another invalid line",
+        "WARN	02:16:02 AM (    3)	 8300              DllMain.cpp: 2191		isIGOSharedMemoryNew=1",
         ];
 
         let parsed_result = parse_log_vec(&log_lines, "");
